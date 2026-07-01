@@ -8,14 +8,14 @@ import { services, serviceById, SERVICE_VAR, bookingPage } from "@/lib/demo/data
 /* ── Inline-SVG fake-business wordmarks for the trusted-by row ───────────────── */
 export function CompanyMark({ name }: { name: string }) {
   const glyphs: Record<string, React.ReactNode> = {
+    "Fade & Bıyık": <path d="M4 5 h16 v4 h-6 v9 h-4 v-9 h-6 z" />,
     "Glow Studio": <circle cx="12" cy="11" r="7" />,
-    "Fade & Co": <path d="M4 5 h16 v4 h-6 v9 h-4 v-9 h-6 z" />,
     "Serenity Spa": <path d="M12 4 c5 4 5 10 0 14 c-5 -4 -5 -10 0 -14 z" />,
     "PeakFit": <path d="M3 17 L9 4 L12 11 L15 4 L21 17" />,
-    "Lumière": <path d="M6 4 v14 h10" />,
     "Nail Bar": <path d="M9 4 h6 v9 a3 3 0 0 1 -6 0 z" />,
-    "Calm Clinic": <path d="M12 4 v16 M4 12 h16" />,
-    "The Cut": <path d="M7 7 l10 10 M17 7 l-10 10" />,
+    "Dermis Klinik": <path d="M12 4 v16 M4 12 h16" />,
+    "Kuaför Selin": <path d="M6 4 v14 h10" />,
+    "Pilates House": <path d="M4 12 a8 8 0 0 1 16 0" />,
   };
   return (
     <span className="inline-flex items-center gap-2 text-muted-foreground/70">
@@ -79,7 +79,7 @@ export function ProductPreview() {
       </div>
 
       <button className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground">
-        {lang === "tr" ? "Rezerve et — depozito $10" : "Book now — $10 deposit"}
+        {lang === "tr" ? "Rezerve et — depozito ₺100" : "Book now — ₺100 deposit"}
       </button>
       <p className="mt-2 text-center text-[10.5px] text-muted-foreground">
         {lang === "tr" ? "Onay anında SMS ile gelir" : "Instant SMS confirmation"}

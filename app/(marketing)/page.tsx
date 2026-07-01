@@ -17,6 +17,7 @@ import appConfig from "@/app.config";
 import { Icon } from "@/components/ui/icon";
 import { BookingDemo } from "@/components/marketing/booking-demo";
 import { ProductPreview, CompanyMark, Stars } from "@/components/marketing/marks";
+import { CheckoutButton } from "@/components/marketing/checkout-button";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 import type { L } from "@/lib/i18n/config";
@@ -32,7 +33,7 @@ const HERO_BENEFITS: L[] = [
   { tr: "Depozitolar ve ödemeler doğrudan Stripe'ına gelir", en: "Deposits and payments land in your Stripe" },
 ];
 
-const TRUSTED = ["Glow Studio", "Fade & Co", "Serenity Spa", "PeakFit", "Lumière", "Nail Bar", "Calm Clinic", "The Cut"];
+const TRUSTED = ["Fade & Bıyık", "Glow Studio", "Serenity Spa", "PeakFit", "Nail Bar", "Dermis Klinik", "Kuaför Selin", "Pilates House"];
 
 const HOW_STEPS: { n: string; icon: string; title: L; body: L }[] = [
   {
@@ -590,17 +591,11 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href="/signup"
-                  className={cn(
-                    "mt-7 inline-flex h-11 items-center justify-center rounded-lg px-5 text-sm font-semibold transition-all",
-                    tier.featured
-                      ? "bg-primary text-primary-foreground shadow-sm hover:opacity-90"
-                      : "border border-border bg-card text-foreground hover:bg-muted",
-                  )}
-                >
-                  {t(tier.cta)}
-                </Link>
+                <CheckoutButton
+                  planId={tier.name === "Pro" ? "pro" : tier.name === "İşletme" ? "isletme" : "solo"}
+                  label={t(tier.cta)}
+                  featured={tier.featured}
+                />
               </div>
             ))}
           </div>

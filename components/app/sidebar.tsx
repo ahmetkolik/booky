@@ -1,33 +1,59 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles, Settings, LifeBuoy, LogOut } from "lucide-react";
+import { Sparkles, Settings, LifeBuoy, LogOut, X, Zap, ChevronDown } from "lucide-react";
 import appConfig from "@/app.config";
 import { Logo } from "@/components/ui/logo";
 import { Icon } from "@/components/ui/icon";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { PLAN_LABEL, type Plan } from "@/lib/demo/data";
+import { usePlan } from "@/components/app/plan-context";
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+  onAiOpen?: () => void;
+}
+
+const PLANS: Plan[] = ["solo", "pro", "isletme"];
+
+export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
   const pathname = usePathname();
   const { t, lang } = useLang();
+  const { plan: activePlan, setPlan: setActivePlan } = usePlan();
+  const [planOpen, setPlanOpen] = useState(false);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <aside className="hidden w-[260px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+    <aside className={cn(
+      "fixed inset-y-0 left-0 z-40 w-[260px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 md:relative md:flex md:translate-x-0",
+      open ? "flex translate-x-0" : "-translate-x-full md:translate-x-0 hidden md:flex",
+    )}>
       {/* Brand */}
       <div className="flex h-16 items-center px-5">
-        <Link href="/dashboard" className="inline-flex">
+        <Link href="/dashboard" className="inline-flex" onClick={onClose}>
           <Logo withChevron />
         </Link>
+        <button
+          onClick={onClose}
+          className="ml-auto grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+          aria-label="Close menu"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       {/* AI Search pill */}
       <div className="px-3 pb-2">
-        <button className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+        <button
+          onClick={onAiOpen}
+          className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
           <Sparkles className="h-4 w-4 text-primary" />
           <span>{lang === "tr" ? "AI ile ara" : "AI Search"}</span>
           <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
@@ -75,6 +101,7 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onClose}
                     className={cn(
                       "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors",
                       active ? "nav-pill-active text-foreground" : "text-foreground/70 hover:bg-muted hover:text-foreground",
@@ -89,10 +116,58 @@ export function Sidebar() {
         ))}
       </nav>
 
+      {/* Active plan badge + demo switcher */}
+      <div className="mx-3 mb-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[12px] font-semibold text-primary">
+              {PLAN_LABEL[activePlan][lang]} {lang === "tr" ? "Paket" : "Plan"}
+            </span>
+          </div>
+          <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
+            {lang === "tr" ? "AKTİF" : "ACTIVE"}
+          </span>
+        </div>
+        {activePlan !== "isletme" && (
+          <Link href="/#pricing" className="mt-1.5 block text-[11px] text-primary/70 hover:text-primary hover:underline">
+            {lang === "tr" ? "İşletme paketine geç →" : "Upgrade to Business →"}
+          </Link>
+        )}
+        {/* Demo plan switcher */}
+        <div className="relative mt-2">
+          <button
+            onClick={() => setPlanOpen((v) => !v)}
+            className="flex w-full items-center gap-1 rounded-lg border border-border bg-card/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            <span className="flex-1 text-left">{lang === "tr" ? "Demo: paketi değiştir" : "Demo: switch plan"}</span>
+            <ChevronDown className={cn("h-3 w-3 transition-transform", planOpen && "rotate-180")} />
+          </button>
+          {planOpen && (
+            <div className="absolute bottom-full left-0 right-0 mb-1 overflow-hidden rounded-xl border border-border bg-card shadow-pop">
+              {PLANS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => { setActivePlan(p); setPlanOpen(false); }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-muted",
+                    activePlan === p ? "font-semibold text-primary" : "text-foreground/70",
+                  )}
+                >
+                  {activePlan === p && <Zap className="h-3 w-3 text-primary" />}
+                  {PLAN_LABEL[p][lang]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Settings + Support */}
       <div className="space-y-0.5 px-3 pb-2">
         <Link
           href="/settings"
+          onClick={onClose}
           className={cn(
             "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors",
             isActive("/settings") ? "nav-pill-active text-foreground" : "text-foreground/70 hover:bg-muted hover:text-foreground",

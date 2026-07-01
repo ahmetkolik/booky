@@ -10,21 +10,24 @@ import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { LanguageToggle } from "@/components/ui/language-toggle";
+import { PLAN_BY_ID, type Plan } from "@/lib/stripe/plans";
 
 /**
  * Login / signup with a DEMO BYPASS. Supabase isn't connected in this kit, so
  * submitting (or "Continue with demo") just drops you into the live demo
  * dashboard. Wire Supabase via /setup to make these forms do real auth.
  */
-export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
+export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"; planId?: Plan["id"] }) {
   const { ui, t, lang } = useLang();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const plan = PLAN_BY_ID[planId];
 
   function enter(e?: React.FormEvent) {
     e?.preventDefault();
     setLoading(true);
-    setTimeout(() => router.push("/dashboard"), 450);
+    const dest = mode === "signup" ? "/onboarding" : "/dashboard";
+    setTimeout(() => router.push(dest), 450);
   }
 
   const isLogin = mode === "login";
@@ -86,6 +89,14 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
             <h2 className="mt-1 font-display text-3xl font-semibold tracking-tight">
               {isLogin ? ui.welcomeBack : ui.createAccount}
             </h2>
+            {!isLogin && plan && plan.id !== "solo" && (
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                {lang === "tr"
+                  ? `${plan.name} planı seçildi · ₺${plan.amountKurus / 100}/ay`
+                  : `${plan.name} plan selected · ₺${plan.amountKurus / 100}/mo`}
+              </p>
+            )}
           </div>
 
           {/* Social (decorative in demo) */}

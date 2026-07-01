@@ -35,13 +35,13 @@ export const SERVICE_VAR: Record<ServiceColor, string> = {
 };
 
 export const services: Service[] = [
-  { id: "s1", name: { tr: "Saç kesimi & şekillendirme", en: "Haircut & style" }, durationMin: 45, price: 48, color: "hair", deposit: 10, bookings30d: 184 },
-  { id: "s2", name: { tr: "Saç boyama", en: "Color & gloss" }, durationMin: 90, price: 120, color: "color", deposit: 30, bookings30d: 96 },
-  { id: "s3", name: { tr: "Sakal tıraşı", en: "Beard trim" }, durationMin: 20, price: 22, color: "hair", deposit: 0, bookings30d: 142 },
-  { id: "s4", name: { tr: "Masaj (60 dk)", en: "Massage (60 min)" }, durationMin: 60, price: 85, color: "spa", deposit: 20, bookings30d: 71 },
-  { id: "s5", name: { tr: "Manikür", en: "Manicure" }, durationMin: 40, price: 38, color: "nail", deposit: 0, bookings30d: 118 },
-  { id: "s6", name: { tr: "Kişisel antrenman", en: "Personal training" }, durationMin: 60, price: 65, color: "train", deposit: 15, bookings30d: 88 },
-  { id: "s7", name: { tr: "Cilt bakımı konsültasyonu", en: "Skin consult" }, durationMin: 30, price: 55, color: "clinic", deposit: 25, bookings30d: 44 },
+  { id: "s1", name: { tr: "Saç kesimi & şekillendirme", en: "Haircut & style" }, durationMin: 45, price: 850, color: "hair", deposit: 200, bookings30d: 184 },
+  { id: "s2", name: { tr: "Saç boyama", en: "Color & gloss" }, durationMin: 90, price: 1600, color: "color", deposit: 400, bookings30d: 96 },
+  { id: "s3", name: { tr: "Sakal tıraşı", en: "Beard trim" }, durationMin: 20, price: 300, color: "hair", deposit: 0, bookings30d: 142 },
+  { id: "s4", name: { tr: "Masaj (60 dk)", en: "Massage (60 min)" }, durationMin: 60, price: 950, color: "spa", deposit: 250, bookings30d: 71 },
+  { id: "s5", name: { tr: "Manikür", en: "Manicure" }, durationMin: 40, price: 450, color: "nail", deposit: 100, bookings30d: 118 },
+  { id: "s6", name: { tr: "Kişisel antrenman", en: "Personal training" }, durationMin: 60, price: 800, color: "train", deposit: 200, bookings30d: 88 },
+  { id: "s7", name: { tr: "Cilt bakımı konsültasyonu", en: "Skin consult" }, durationMin: 30, price: 750, color: "clinic", deposit: 200, bookings30d: 44 },
 ];
 
 export function serviceById(id: string) {
@@ -113,24 +113,24 @@ export const STATUS_META: Record<ApptStatus, { label: L; tone: string; dot: stri
 };
 
 export const appointments: Appointment[] = [
-  { id: "ap1", client: "Elif Şahin", clientInitials: "EŞ", clientPhone: "+90 532 110 4421", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 9 * 60, status: "done", price: 48, paid: true, source: "online", pastVisits: 7, note: { tr: "Yanları kısa istiyor.", en: "Likes the sides short." } },
-  { id: "ap2", client: "Burak Öz", clientInitials: "BÖ", clientPhone: "+90 535 220 8830", serviceId: "s3", staffId: "st2", dayOffset: 0, startMin: 9 * 60 + 30, status: "done", price: 22, paid: true, source: "walk-in", pastVisits: 3 },
-  { id: "ap3", client: "Deniz Arslan", clientInitials: "DA", clientPhone: "+90 530 441 2210", serviceId: "s2", staffId: "st1", dayOffset: 0, startMin: 10 * 60, status: "checked-in", price: 120, paid: true, source: "online", pastVisits: 12, note: { tr: "Köklere dikkat — alerji geçmişi yok.", en: "Watch the roots — no allergy history." } },
-  { id: "ap4", client: "Zeynep Korkmaz", clientInitials: "ZK", clientPhone: "+90 538 902 1144", serviceId: "s4", staffId: "st3", dayOffset: 0, startMin: 10 * 60 + 30, status: "checked-in", price: 85, paid: false, source: "online", pastVisits: 5 },
-  { id: "ap5", client: "Kerem Aslan", clientInitials: "KA", clientPhone: "+90 533 700 5512", serviceId: "s6", staffId: "st4", dayOffset: 0, startMin: 11 * 60, status: "booked", price: 65, paid: true, source: "online", pastVisits: 21, note: { tr: "Alt vücut günü.", en: "Lower-body day." } },
-  { id: "ap6", client: "Naz Yılmaz", clientInitials: "NY", clientPhone: "+90 536 318 7740", serviceId: "s5", staffId: "st3", dayOffset: 0, startMin: 12 * 60, status: "booked", price: 38, paid: false, source: "online", pastVisits: 2 },
-  { id: "ap7", client: "Ahmet Çelik", clientInitials: "AÇ", clientPhone: "+90 532 555 9081", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 12 * 60 + 30, status: "booked", price: 48, paid: true, source: "phone", pastVisits: 9 },
-  { id: "ap8", client: "Sıla Demir", clientInitials: "SD", clientPhone: "+90 535 642 3320", serviceId: "s3", staffId: "st2", dayOffset: 0, startMin: 13 * 60, status: "booked", price: 22, paid: false, source: "online", pastVisits: 0, note: { tr: "İlk ziyaret.", en: "First visit." } },
-  { id: "ap9", client: "Onur Kılıç", clientInitials: "OK", clientPhone: "+90 530 904 6651", serviceId: "s7", staffId: "st3", dayOffset: 0, startMin: 14 * 60, status: "booked", price: 55, paid: true, source: "online", pastVisits: 1 },
-  { id: "ap10", client: "Ece Polat", clientInitials: "EP", clientPhone: "+90 538 233 1190", serviceId: "s2", staffId: "st1", dayOffset: 0, startMin: 14 * 60 + 30, status: "booked", price: 120, paid: true, source: "online", pastVisits: 6 },
-  { id: "ap11", client: "Tolga Ak", clientInitials: "TA", clientPhone: "+90 533 118 7702", serviceId: "s6", staffId: "st4", dayOffset: 0, startMin: 13 * 60, status: "no-show", price: 65, paid: false, source: "online", pastVisits: 4 },
-  { id: "ap12", client: "Pınar Güneş", clientInitials: "PG", clientPhone: "+90 536 770 2231", serviceId: "s4", staffId: "st3", dayOffset: 0, startMin: 15 * 60 + 30, status: "booked", price: 85, paid: true, source: "online", pastVisits: 8 },
-  { id: "ap13", client: "Barış Yatağan", clientInitials: "BY", clientPhone: "+90 532 449 1187", serviceId: "s3", staffId: "st2", dayOffset: 0, startMin: 15 * 60, status: "booked", price: 22, paid: false, source: "walk-in", pastVisits: 11 },
-  { id: "ap14", client: "Melis Acar", clientInitials: "MA", clientPhone: "+90 535 661 3309", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 16 * 60 + 30, status: "booked", price: 48, paid: true, source: "online", pastVisits: 14 },
+  { id: "ap1", client: "Elif Şahin", clientInitials: "EŞ", clientPhone: "+90 532 110 4421", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 9 * 60, status: "done", price: 850, paid: true, source: "online", pastVisits: 7, note: { tr: "Yanları kısa istiyor.", en: "Likes the sides short." } },
+  { id: "ap2", client: "Burak Öz", clientInitials: "BÖ", clientPhone: "+90 535 220 8830", serviceId: "s3", staffId: "st2", dayOffset: 0, startMin: 9 * 60 + 30, status: "done", price: 300, paid: true, source: "walk-in", pastVisits: 3 },
+  { id: "ap3", client: "Deniz Arslan", clientInitials: "DA", clientPhone: "+90 530 441 2210", serviceId: "s2", staffId: "st1", dayOffset: 0, startMin: 10 * 60, status: "checked-in", price: 1600, paid: true, source: "online", pastVisits: 12, note: { tr: "Köklere dikkat — alerji geçmişi yok.", en: "Watch the roots — no allergy history." } },
+  { id: "ap4", client: "Zeynep Korkmaz", clientInitials: "ZK", clientPhone: "+90 538 902 1144", serviceId: "s4", staffId: "st3", dayOffset: 0, startMin: 10 * 60 + 30, status: "checked-in", price: 950, paid: false, source: "online", pastVisits: 5 },
+  { id: "ap5", client: "Kerem Aslan", clientInitials: "KA", clientPhone: "+90 533 700 5512", serviceId: "s6", staffId: "st4", dayOffset: 0, startMin: 11 * 60, status: "booked", price: 800, paid: true, source: "online", pastVisits: 21, note: { tr: "Alt vücut günü.", en: "Lower-body day." } },
+  { id: "ap6", client: "Naz Yılmaz", clientInitials: "NY", clientPhone: "+90 536 318 7740", serviceId: "s5", staffId: "st3", dayOffset: 0, startMin: 12 * 60, status: "booked", price: 450, paid: false, source: "online", pastVisits: 2 },
+  { id: "ap7", client: "Ahmet Çelik", clientInitials: "AÇ", clientPhone: "+90 532 555 9081", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 12 * 60 + 30, status: "booked", price: 850, paid: true, source: "phone", pastVisits: 9 },
+  { id: "ap8", client: "Sıla Demir", clientInitials: "SD", clientPhone: "+90 535 642 3320", serviceId: "s3", staffId: "st2", dayOffset: 0, startMin: 13 * 60, status: "booked", price: 300, paid: false, source: "online", pastVisits: 0, note: { tr: "İlk ziyaret.", en: "First visit." } },
+  { id: "ap9", client: "Onur Kılıç", clientInitials: "OK", clientPhone: "+90 530 904 6651", serviceId: "s7", staffId: "st3", dayOffset: 0, startMin: 14 * 60, status: "booked", price: 750, paid: true, source: "online", pastVisits: 1 },
+  { id: "ap10", client: "Ece Polat", clientInitials: "EP", clientPhone: "+90 538 233 1190", serviceId: "s2", staffId: "st1", dayOffset: 0, startMin: 14 * 60 + 30, status: "booked", price: 1600, paid: true, source: "online", pastVisits: 6 },
+  { id: "ap11", client: "Tolga Ak", clientInitials: "TA", clientPhone: "+90 533 118 7702", serviceId: "s6", staffId: "st4", dayOffset: 0, startMin: 13 * 60, status: "no-show", price: 800, paid: false, source: "online", pastVisits: 4 },
+  { id: "ap12", client: "Pınar Güneş", clientInitials: "PG", clientPhone: "+90 536 770 2231", serviceId: "s4", staffId: "st3", dayOffset: 0, startMin: 15 * 60 + 30, status: "booked", price: 950, paid: true, source: "online", pastVisits: 8 },
+  { id: "ap13", client: "Barış Yatağan", clientInitials: "BY", clientPhone: "+90 532 449 1187", serviceId: "s3", staffId: "st2", dayOffset: 0, startMin: 15 * 60, status: "booked", price: 300, paid: false, source: "walk-in", pastVisits: 11 },
+  { id: "ap14", client: "Melis Acar", clientInitials: "MA", clientPhone: "+90 535 661 3309", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 16 * 60 + 30, status: "booked", price: 850, paid: true, source: "online", pastVisits: 14 },
   // adjacent days (so the day nav has content)
-  { id: "ap15", client: "Hakan Şen", clientInitials: "HŞ", clientPhone: "+90 533 200 4410", serviceId: "s6", staffId: "st4", dayOffset: 1, startMin: 9 * 60, status: "booked", price: 65, paid: true, source: "online", pastVisits: 3 },
-  { id: "ap16", client: "Defne Toprak", clientInitials: "DT", clientPhone: "+90 536 884 2218", serviceId: "s2", staffId: "st1", dayOffset: 1, startMin: 11 * 60, status: "booked", price: 120, paid: true, source: "online", pastVisits: 5 },
-  { id: "ap17", client: "Yusuf Eren", clientInitials: "YE", clientPhone: "+90 532 071 9923", serviceId: "s3", staffId: "st2", dayOffset: -1, startMin: 10 * 60, status: "done", price: 22, paid: true, source: "walk-in", pastVisits: 6 },
+  { id: "ap15", client: "Hakan Şen", clientInitials: "HŞ", clientPhone: "+90 533 200 4410", serviceId: "s6", staffId: "st4", dayOffset: 1, startMin: 9 * 60, status: "booked", price: 800, paid: true, source: "online", pastVisits: 3 },
+  { id: "ap16", client: "Defne Toprak", clientInitials: "DT", clientPhone: "+90 536 884 2218", serviceId: "s2", staffId: "st1", dayOffset: 1, startMin: 11 * 60, status: "booked", price: 1600, paid: true, source: "online", pastVisits: 5 },
+  { id: "ap17", client: "Yusuf Eren", clientInitials: "YE", clientPhone: "+90 532 071 9923", serviceId: "s3", staffId: "st2", dayOffset: -1, startMin: 10 * 60, status: "done", price: 300, paid: true, source: "walk-in", pastVisits: 6 },
 ];
 
 /* ── Stat row (today) ───────────────────────────────────────────────────────── */
@@ -145,7 +145,7 @@ export interface DKpi {
 
 export const kpis: DKpi[] = [
   { key: "bookings", label: { tr: "Bugünkü randevu", en: "Bookings today" }, value: "14", delta: 9.2, icon: "calendar-check", hint: { tr: "dün 12", en: "12 yesterday" } },
-  { key: "revenue", label: { tr: "Günlük gelir", en: "Revenue" }, value: "$842", delta: 14.6, icon: "dollar-sign", hint: { tr: "geçen haftaya göre", en: "vs last week" } },
+  { key: "revenue", label: { tr: "Günlük gelir", en: "Revenue" }, value: "₺12.850", delta: 14.6, icon: "dollar-sign", hint: { tr: "geçen haftaya göre", en: "vs last week" } },
   { key: "utilization", label: { tr: "Doluluk", en: "Utilization" }, value: "70%", delta: 4.1, icon: "gauge", hint: { tr: "4 personel ort.", en: "avg of 4 staff" } },
   { key: "clients", label: { tr: "Yeni müşteri", en: "New clients" }, value: "5", delta: -2.0, icon: "user-plus", hint: { tr: "bu hafta", en: "this week" } },
 ];
@@ -156,9 +156,9 @@ export const revenue = {
     title: { tr: "Gelir", en: "Revenue" } as L,
     subtitle: { tr: "Son 14 gün", en: "Last 14 days" } as L,
     delta: "+14.6%",
-    total: 9840,
+    total: 152800,
   },
-  series: [520, 610, 480, 700, 660, 540, 880, 920, 760, 690, 940, 810, 770, 842],
+  series: [7800, 9400, 7200, 10800, 10200, 8400, 13600, 14200, 11800, 10600, 14400, 12400, 11800, 12850],
   labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"],
 };
 
@@ -192,14 +192,14 @@ export const CLIENT_TAG: Record<Client["tag"], { label: L; tone: string }> = {
 };
 
 export const clients: Client[] = [
-  { id: "c1", name: "Elif Şahin", initials: "EŞ", email: "elif@example.com", phone: "+90 532 110 4421", visits: 8, spend: 412, lastVisit: "2026-06-14", tag: "vip" },
-  { id: "c2", name: "Kerem Aslan", initials: "KA", email: "kerem@example.com", phone: "+90 533 700 5512", visits: 22, spend: 1430, lastVisit: "2026-06-14", tag: "vip" },
-  { id: "c3", name: "Deniz Arslan", initials: "DA", email: "deniz@example.com", phone: "+90 530 441 2210", visits: 13, spend: 1560, lastVisit: "2026-06-14", tag: "vip" },
-  { id: "c4", name: "Ahmet Çelik", initials: "AÇ", email: "ahmet@example.com", phone: "+90 532 555 9081", visits: 10, spend: 480, lastVisit: "2026-06-12", tag: "regular" },
-  { id: "c5", name: "Pınar Güneş", initials: "PG", email: "pinar@example.com", phone: "+90 536 770 2231", visits: 9, spend: 765, lastVisit: "2026-06-11", tag: "regular" },
-  { id: "c6", name: "Sıla Demir", initials: "SD", email: "sila@example.com", phone: "+90 535 642 3320", visits: 1, spend: 22, lastVisit: "2026-06-14", tag: "new" },
-  { id: "c7", name: "Onur Kılıç", initials: "OK", email: "onur@example.com", phone: "+90 530 904 6651", visits: 2, spend: 110, lastVisit: "2026-06-14", tag: "new" },
-  { id: "c8", name: "Tolga Ak", initials: "TA", email: "tolga@example.com", phone: "+90 533 118 7702", visits: 5, spend: 325, lastVisit: "2026-05-02", tag: "lapsed" },
+  { id: "c1", name: "Elif Şahin", initials: "EŞ", email: "elif@example.com", phone: "+90 532 110 4421", visits: 8, spend: 7200, lastVisit: "2026-06-14", tag: "vip" },
+  { id: "c2", name: "Kerem Aslan", initials: "KA", email: "kerem@example.com", phone: "+90 533 700 5512", visits: 22, spend: 21600, lastVisit: "2026-06-14", tag: "vip" },
+  { id: "c3", name: "Deniz Arslan", initials: "DA", email: "deniz@example.com", phone: "+90 530 441 2210", visits: 13, spend: 24800, lastVisit: "2026-06-14", tag: "vip" },
+  { id: "c4", name: "Ahmet Çelik", initials: "AÇ", email: "ahmet@example.com", phone: "+90 532 555 9081", visits: 10, spend: 8500, lastVisit: "2026-06-12", tag: "regular" },
+  { id: "c5", name: "Pınar Güneş", initials: "PG", email: "pinar@example.com", phone: "+90 536 770 2231", visits: 9, spend: 9500, lastVisit: "2026-06-11", tag: "regular" },
+  { id: "c6", name: "Sıla Demir", initials: "SD", email: "sila@example.com", phone: "+90 535 642 3320", visits: 1, spend: 300, lastVisit: "2026-06-14", tag: "new" },
+  { id: "c7", name: "Onur Kılıç", initials: "OK", email: "onur@example.com", phone: "+90 530 904 6651", visits: 2, spend: 1600, lastVisit: "2026-06-14", tag: "new" },
+  { id: "c8", name: "Tolga Ak", initials: "TA", email: "tolga@example.com", phone: "+90 533 118 7702", visits: 5, spend: 4800, lastVisit: "2026-05-02", tag: "lapsed" },
 ];
 
 /* ── Upcoming / no-show panel ───────────────────────────────────────────────── */
@@ -251,6 +251,24 @@ export const activity: DActivity[] = [
   { id: "a4", who: "Kerem Aslan", action: { tr: "depozito ödedi:", en: "paid deposit:" }, target: "$15", at: "2026-06-14T07:55:00Z", tone: "success" },
   { id: "a5", who: "System", action: { tr: "hatırlatma gönderdi:", en: "sent reminders:" }, target: "9 clients", at: "2026-06-14T06:00:00Z", tone: "neutral" },
 ];
+
+/* ── Plan gate (demo only) ───────────────────────────────────────────────────
+   Switch DEMO_PLAN to test different permission tiers in the UI.
+   In production this comes from the Stripe subscription record. */
+export type Plan = "solo" | "pro" | "isletme";
+export const DEMO_PLAN: Plan = "pro";
+
+export const PLAN_LABEL: Record<Plan, { tr: string; en: string }> = {
+  solo:     { tr: "Solo",     en: "Solo" },
+  pro:      { tr: "Pro",      en: "Pro" },
+  isletme:  { tr: "İşletme",  en: "Business" },
+};
+
+/** Returns true when the active plan is at or above the required tier. */
+export function planAtLeast(required: Plan): boolean {
+  const order: Plan[] = ["solo", "pro", "isletme"];
+  return order.indexOf(DEMO_PLAN) >= order.indexOf(required);
+}
 
 /* ── Interactive landing demo data ──────────────────────────────────────────── */
 export const demoServices = ["s1", "s4", "s5"];

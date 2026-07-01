@@ -16,10 +16,13 @@ import {
   CreditCard,
   CalendarCheck,
   Share2,
+  Download,
 } from "lucide-react";
+import { Lock } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { AreaChart, SegmentedBar } from "@/components/app/charts";
 import { useLang } from "@/components/i18n/language-provider";
+import { usePlan } from "@/components/app/plan-context";
 import { cn, formatPrice, formatMoney, minutesToLabel, minutesToHHMM, formatDuration, formatRelative } from "@/lib/utils";
 import {
   appointments,
@@ -45,6 +48,28 @@ import {
   type ApptStatus,
 } from "@/lib/demo/data";
 
+function exportRevenueCSV(lang: "tr" | "en") {
+  const header = lang === "tr"
+    ? ["Gün", "Gelir (₺)", "Değişim (%)"]
+    : ["Day", "Revenue (₺)", "Change (%)"];
+  const rows = revenue.series.map((val, i, arr) => {
+    const prev = i > 0 ? arr[i - 1] : null;
+    const pct = prev ? (((val - prev) / prev) * 100).toFixed(1) : "";
+    return [lang === "tr" ? `${i + 1}. gün` : `Day ${i + 1}`, val, pct];
+  });
+  const serviceRows = [
+    [],
+    lang === "tr" ? ["Hizmet", "Fiyat (₺)", "30g Rezerv.", "30g Gelir (₺)"] : ["Service", "Price (₺)", "30d Bookings", "30d Revenue (₺)"],
+    ...services.map(s => [s.name[lang], s.price, s.bookings30d, s.price * s.bookings30d]),
+  ];
+  const csv = [[header, ...rows, ...serviceRows].map(r => r.join(",")).join("\n")];
+  const blob = new Blob(csv, { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `booky-gelir-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+}
+
 const DAY_LABELS: { tr: string; en: string }[] = [
   { tr: "Dün", en: "Yesterday" },
   { tr: "Bugün", en: "Today" },
@@ -53,6 +78,8 @@ const DAY_LABELS: { tr: string; en: string }[] = [
 
 export default function DashboardPage() {
   const { t, lang } = useLang();
+  const { atLeast } = usePlan();
+  const canRevenue = atLeast("isletme");
   const [dayOffset, setDayOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>("ap3");
 
@@ -83,13 +110,13 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-[13px] font-medium text-foreground shadow-pill transition-colors hover:bg-muted">
+              <button className="hidden h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-[13px] font-medium text-foreground shadow-pill transition-colors hover:bg-muted sm:inline-flex">
                 <Share2 className="h-4 w-4 text-muted-foreground" />
                 {lang === "tr" ? "Rezervasyon linki" : "Booking link"}
               </button>
-              <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">
+              <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 sm:px-3.5">
                 <Plus className="h-4 w-4" />
-                {lang === "tr" ? "Randevu ekle" : "New booking"}
+                <span className="hidden sm:inline">{lang === "tr" ? "Randevu ekle" : "New booking"}</span>
               </button>
             </div>
           </div>
@@ -238,14 +265,111 @@ export default function DashboardPage() {
                   <h3 className="font-display text-[15px] font-semibold tracking-tight">{t(revenue.meta.title)}</h3>
                   <p className="text-xs text-muted-foreground">{t(revenue.meta.subtitle)}</p>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
-                  <ArrowUpRight className="h-3 w-3" />
-                  {revenue.meta.delta}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => canRevenue ? exportRevenueCSV(lang) : undefined}
+                    title={canRevenue ? (lang === "tr" ? "Excel/CSV indir" : "Download Excel/CSV") : (lang === "tr" ? "İşletme paketi gerekli" : "Business plan required")}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-medium shadow-pill transition-colors",
+                      canRevenue ? "text-muted-foreground hover:bg-muted hover:text-foreground" : "cursor-not-allowed text-muted-foreground/40",
+                    )}
+                  >
+                    {canRevenue ? <Download className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                    CSV
+                  </button>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+                    <ArrowUpRight className="h-3 w-3" />
+                    {revenue.meta.delta}
+                  </span>
+                </div>
               </div>
               <p className="mt-3 tnum text-2xl font-bold leading-none">{formatMoney(revenue.meta.total)}</p>
-              <div className="mt-4">
-                <AreaChart data={revenue.series} labels={revenue.labels} height={158} />
+
+              {/* Detailed revenue table — İşletme only */}
+              <div className="relative mt-4">
+                <div className={cn("overflow-hidden rounded-xl border border-border", !canRevenue && "pointer-events-none select-none blur-[3px] opacity-60")}>
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="py-2 pl-3 text-left font-medium text-muted-foreground">{lang === "tr" ? "Gün" : "Day"}</th>
+                        <th className="py-2 text-right font-medium text-muted-foreground">{lang === "tr" ? "Gelir" : "Revenue"}</th>
+                        <th className="py-2 pr-3 text-right font-medium text-muted-foreground">{lang === "tr" ? "Değişim" : "Change"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {revenue.series.slice(-7).map((val, i, arr) => {
+                        const prev = i > 0 ? arr[i - 1] : null;
+                        const pct = prev ? ((val - prev) / prev) * 100 : null;
+                        const up = pct !== null && pct >= 0;
+                        return (
+                          <tr key={i} className="border-b border-border/40 last:border-0">
+                            <td className="py-1.5 pl-3 text-muted-foreground">
+                              {lang === "tr" ? `${8 + i}. gün` : `Day ${8 + i}`}
+                            </td>
+                            <td className="tnum py-1.5 text-right font-semibold">{formatMoney(val)}</td>
+                            <td className={cn("tnum py-1.5 pr-3 text-right text-[11px] font-medium", pct === null ? "text-muted-foreground" : up ? "text-success" : "text-destructive")}>
+                              {pct === null ? "—" : `${up ? "+" : ""}${pct.toFixed(1)}%`}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-muted/30">
+                        <td className="py-2 pl-3 text-[11px] font-semibold">{lang === "tr" ? "14 günlük toplam" : "14-day total"}</td>
+                        <td className="tnum py-2 text-right text-[12px] font-bold">{formatMoney(revenue.meta.total)}</td>
+                        <td className="py-2 pr-3 text-right">
+                          <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold text-success">{revenue.meta.delta}</span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {!canRevenue && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl">
+                    <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card/90 px-5 py-4 text-center shadow-pop backdrop-blur-sm">
+                      <Lock className="h-5 w-5 text-primary" />
+                      <p className="text-[12px] font-semibold">{lang === "tr" ? "İşletme paketi gerekli" : "Business plan required"}</p>
+                      <p className="text-[11px] text-muted-foreground">{lang === "tr" ? "Detaylı tablo & CSV export" : "Detailed table & CSV export"}</p>
+                      <Link href="/#pricing" className="mt-1 inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground hover:opacity-90">
+                        {lang === "tr" ? "İşletme'ye geç →" : "Upgrade →"}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Hizmet bazlı karlılık — İşletme only */}
+              <div className="relative mt-4">
+                <div className={cn(!canRevenue && "pointer-events-none select-none blur-[3px] opacity-60")}>
+                  <p className="mb-2 text-[12px] font-semibold text-muted-foreground">{lang === "tr" ? "Hizmet bazlı karlılık (30 gün)" : "Per-service profitability (30d)"}</p>
+                  <div className="space-y-1.5">
+                    {services.slice(0, 4).map((s) => {
+                      const total = s.price * s.bookings30d;
+                      const maxTotal = Math.max(...services.map(sv => sv.price * sv.bookings30d));
+                      return (
+                        <div key={s.id} className="flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: SERVICE_VAR[s.color] }} />
+                          <span className="min-w-0 flex-1 truncate text-[11.5px] text-muted-foreground">{t(s.name)}</span>
+                          <div className="flex w-32 items-center gap-1.5">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-primary/60" style={{ width: `${(total / maxTotal) * 100}%` }} />
+                            </div>
+                            <span className="tnum w-20 text-right text-[11px] font-semibold">{formatMoney(total)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {!canRevenue && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+                    <div className="flex items-center gap-2 rounded-xl border border-border bg-card/90 px-4 py-2.5 shadow-soft backdrop-blur-sm">
+                      <Lock className="h-4 w-4 text-primary" />
+                      <span className="text-[11.5px] font-semibold">{lang === "tr" ? "İşletme paketi — karlılık raporu" : "Business plan — profitability report"}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -257,7 +381,9 @@ export default function DashboardPage() {
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <MiniStat label={lang === "tr" ? "Doluluk" : "Utilization"} value="70%" />
-                <MiniStat label={lang === "tr" ? "Ort. fiş" : "Avg ticket"} value="$60" />
+                <MiniStat label={lang === "tr" ? "Ort. fiş" : "Avg ticket"} value="₺914" />
+                <MiniStat label={lang === "tr" ? "No-show oranı" : "No-show rate"} value="%7" />
+                <MiniStat label={lang === "tr" ? "Dep. tahsilat" : "Dep. captured"} value="₺650" />
               </div>
             </div>
           </div>
@@ -370,7 +496,16 @@ export default function DashboardPage() {
 
         {/* ── Right drawer ─────────────────────────────────────────── */}
         {drawerOpen && selected && (
-          <aside className="animate-float-up xl:sticky xl:top-2 xl:self-start">
+          <>
+            {/* Mobile backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm xl:hidden"
+              onClick={() => setSelectedId(null)}
+            />
+          </>
+        )}
+        {drawerOpen && selected && (
+          <aside className="fixed bottom-0 left-0 right-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-2xl animate-float-up xl:relative xl:bottom-auto xl:left-auto xl:right-auto xl:z-auto xl:max-h-none xl:rounded-none xl:sticky xl:top-2 xl:self-start">
             <AppointmentDrawer appt={selected} onClose={() => setSelectedId(null)} lang={lang} t={t} />
 
             {/* Upcoming / no-show panel */}

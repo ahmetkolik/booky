@@ -5,11 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Default currency for this kit. The setup can switch this per project. */
-export const CURRENCY = "USD";
+/** Default currency for this kit. */
+export const CURRENCY = "TRY";
 
 export function formatMoney(amount: number, currency: string = CURRENCY) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
@@ -56,7 +56,7 @@ export function initials(name: string) {
 
 /** Money with cents kept — used for service prices / deposits. */
 export function formatPrice(amount: number, currency: string = CURRENCY) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency,
     maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
