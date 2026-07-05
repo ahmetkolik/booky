@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, Plus, Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -12,12 +12,15 @@ interface TopbarProps {
   onMenuClick?: () => void;
 }
 
+const emptySubscribe = () => () => {};
+/** true after hydration, false during SSR — no effect/setState needed. */
+const useMounted = () => useSyncExternalStore(emptySubscribe, () => true, () => false);
+
 export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname();
   const { t, lang } = useLang();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
   const current =
     appConfig.nav.find((n) => pathname === n.href || pathname.startsWith(n.href + "/")) ??
     appConfig.navGroups.flatMap((g) => g.items).find((n) => pathname === n.href || pathname.startsWith(n.href + "/"));

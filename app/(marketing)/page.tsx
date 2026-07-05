@@ -349,7 +349,7 @@ export default function LandingPage() {
               {[
                 { v: "-38%", l: { tr: "gelmeyen", en: "no-shows" } as L },
                 { v: "92%", l: { tr: "doluluk", en: "utilization" } as L },
-                { v: "$0", l: { tr: "komisyon", en: "commission" } as L },
+                { v: "₺0", l: { tr: "komisyon", en: "commission" } as L },
               ].map((s, i) => (
                 <Reveal key={s.v} delay={200 + i * 120} y={22} scale={0.94}>
                   <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-soft">
@@ -942,7 +942,7 @@ function PhoneMock({ lang }: { lang: "tr" | "en" }) {
           {/* deposit bubble */}
           <Reveal x={26} y={0} delay={750} duration={600}>
             <div className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-tr-sm bg-primary p-3 text-[12.5px] text-primary-foreground">
-              {lang === "tr" ? "$10 depozito ödendi 💳" : "$10 deposit paid 💳"}
+              {lang === "tr" ? "₺200 depozito ödendi 💳" : "₺200 deposit paid 💳"}
             </div>
           </Reveal>
           {/* actions */}

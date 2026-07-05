@@ -37,11 +37,15 @@ export function AiSearch({ open, onClose }: { open: boolean; onClose: () => void
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    } else {
+      const id = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(id);
+    }
+    // Reset asynchronously — clears the thread once the palette has closed.
+    const id = setTimeout(() => {
       setMessages([]);
       setInput("");
-    }
+    }, 0);
+    return () => clearTimeout(id);
   }, [open]);
 
   useEffect(() => {

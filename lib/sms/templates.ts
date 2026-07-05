@@ -18,6 +18,9 @@ interface TemplateData {
   businessName: string;
   /** Short cancellation / rebook link, e.g. https://app.com/book/slug */
   bookingUrl?: string;
+  /** Google Maps link to the business — the "directions" (yol tarifi) in the
+      2h reminder. Set in Settings → Location; falls back to the demo address. */
+  mapsUrl?: string;
 }
 
 const TEMPLATES: Record<ReminderType, Record<Lang, (d: TemplateData) => string>> = {
@@ -35,9 +38,9 @@ const TEMPLATES: Record<ReminderType, Record<Lang, (d: TemplateData) => string>>
   },
   reminder_2h: {
     tr: (d) =>
-      `Bugun saat ${d.time} randevunuz var: ${d.serviceName} @ ${d.businessName}. Goruscek uz!`,
+      `Bugun saat ${d.time} randevunuz var: ${d.serviceName} @ ${d.businessName}.${d.mapsUrl ? ` Yol tarifi: ${d.mapsUrl}` : ""}${d.bookingUrl ? ` Onay: ${d.bookingUrl}` : ""} Gorusmek uzere!`,
     en: (d) =>
-      `Today at ${d.time}: ${d.serviceName} @ ${d.businessName}. See you soon!`,
+      `Today at ${d.time}: ${d.serviceName} @ ${d.businessName}.${d.mapsUrl ? ` Directions: ${d.mapsUrl}` : ""}${d.bookingUrl ? ` Confirm: ${d.bookingUrl}` : ""} See you soon!`,
   },
   thankyou: {
     tr: (d) =>

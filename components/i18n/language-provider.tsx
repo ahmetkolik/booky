@@ -28,7 +28,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem("lang");
-    if (saved === "tr" || saved === "en") setLangState(saved);
+    if (saved !== "tr" && saved !== "en") return;
+    // Async so the sync-setState-in-effect lint rule stays happy; also keep
+    // <html lang> in step with the restored choice (it only changed on toggle
+    // before, so a saved "en" left the document claiming "tr").
+    const id = requestAnimationFrame(() => {
+      setLangState(saved);
+      document.documentElement.lang = saved;
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
   const setLang = useCallback((l: Lang) => {

@@ -228,6 +228,12 @@ export const bookingPage = {
   tagline: { tr: "Güzellik & bakım · İstanbul", en: "Beauty & care · Istanbul" } as L,
   rating: 4.9,
   reviews: 312,
+  /** Street address — shown on the booking page and editable in Settings →
+      Location. Feeds the "directions" (yol tarifi) link in reminder SMS. */
+  address: "Caferağa Mah. Moda Cad. No:74/B, Kadıköy, İstanbul",
+  /** Google Maps link for the address above. Keep the two in sync: the SMS
+      directions, the booking page and the settings panel all use this URL. */
+  mapsUrl: "https://www.google.com/maps/search/?api=1&query=Cafera%C4%9Fa%20Mah.%20Moda%20Cad.%20No%3A74%2FB%2C%20Kad%C4%B1k%C3%B6y%2C%20%C4%B0stanbul",
   /** Service options the public widget offers. */
   options: ["s1", "s2", "s4", "s5"],
   /** Open slots for the picked day (minutes from midnight). */
@@ -248,7 +254,7 @@ export const activity: DActivity[] = [
   { id: "a1", who: "Elif Şahin", action: { tr: "online rezervasyon:", en: "booked online:" }, target: "Color & gloss", at: "2026-06-14T09:42:00Z", tone: "success" },
   { id: "a2", who: "Tolga Ak", action: { tr: "gelmedi —", en: "no-show —" }, target: "deposit captured", at: "2026-06-14T13:05:00Z", tone: "warning" },
   { id: "a3", who: "Sıla Demir", action: { tr: "ilk randevu:", en: "first booking:" }, target: "Beard trim", at: "2026-06-14T08:20:00Z", tone: "info" },
-  { id: "a4", who: "Kerem Aslan", action: { tr: "depozito ödedi:", en: "paid deposit:" }, target: "$15", at: "2026-06-14T07:55:00Z", tone: "success" },
+  { id: "a4", who: "Kerem Aslan", action: { tr: "depozito ödedi:", en: "paid deposit:" }, target: "₺200", at: "2026-06-14T07:55:00Z", tone: "success" },
   { id: "a5", who: "System", action: { tr: "hatırlatma gönderdi:", en: "sent reminders:" }, target: "9 clients", at: "2026-06-14T06:00:00Z", tone: "neutral" },
 ];
 

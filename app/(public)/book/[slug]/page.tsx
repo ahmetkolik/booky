@@ -16,7 +16,6 @@ import {
 import { cn, formatPrice, formatDuration, minutesToHHMM } from "@/lib/utils";
 import {
   bookingPage,
-  services,
   staff,
   serviceById,
   SERVICE_VAR,
@@ -69,7 +68,7 @@ function Steps({ current }: { current: Step }) {
 }
 
 /* ── Main page ───────────────────────────────────────────────── */
-export default function BookingPage({ params }: { params: { slug: string } }) {
+export default function BookingPage() {
   const { t, lang } = useLang();
 
   /* In demo mode every slug shows the same business. With Supabase this becomes a DB lookup. */
@@ -343,9 +342,15 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
                     </span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>{t(business.tagline)}</span>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {business.address}
+                    {" · "}
+                    <a href={business.mapsUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">
+                      {lang === "tr" ? "Yol tarifi" : "Directions"}
+                    </a>
+                  </span>
                 </div>
               </div>
 
@@ -447,17 +452,31 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
                     </span>
                   </div>
                 )}
+                <div className="flex justify-between gap-4">
+                  <span className="shrink-0 text-muted-foreground">{lang === "tr" ? "Adres" : "Address"}</span>
+                  <span className="text-right font-semibold">{business.address}</span>
+                </div>
                 <div className="border-t border-border pt-3 flex justify-between">
                   <span className="text-muted-foreground">{lang === "tr" ? "Toplam" : "Total"}</span>
                   <span className="tnum text-[15px] font-bold">{formatPrice(svc.price)}</span>
                 </div>
               </div>
 
+              <a
+                href={business.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-[13.5px] font-semibold text-foreground shadow-pill transition-colors hover:bg-muted"
+              >
+                <MapPin className="h-4 w-4 text-primary" />
+                {lang === "tr" ? "Yol tarifi al (Google Maps)" : "Get directions (Google Maps)"}
+              </a>
+
               {smsConsent && (
                 <p className="text-[12px] text-muted-foreground">
                   {lang === "tr"
-                    ? "Randevunuzdan 24 saat önce SMS hatırlatması gönderilecek."
-                    : "You'll receive an SMS reminder 24 hours before your appointment."}
+                    ? "Randevunuzdan 24 saat önce hatırlatma, 2 saat önce yol tarifiyle son bir SMS gönderilecek."
+                    : "You'll get a reminder 24h before, and a final SMS with directions 2h before your appointment."}
                 </p>
               )}
 

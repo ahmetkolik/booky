@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Clock, BarChart2, Scissors, CheckCircle2, Circle } from "lucide-react";
+import { Plus, X, Clock, BarChart2, CheckCircle2, Circle } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, formatDuration, minutesToHHMM } from "@/lib/utils";
 import { staff, services, appointments, SERVICE_VAR, type Staff } from "@/lib/demo/data";

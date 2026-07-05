@@ -32,8 +32,8 @@ export function useInView<T extends HTMLElement>(opts?: {
     const el = ref.current;
     if (!el) return;
     if (prefersReducedMotion()) {
-      setInView(true);
-      return;
+      const id = requestAnimationFrame(() => setInView(true));
+      return () => cancelAnimationFrame(id);
     }
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -297,8 +297,8 @@ export function useSectionProgress<T extends HTMLElement>(steps = 0, lead = 0.85
     if (!el) return;
     if (prefersReducedMotion()) {
       el.style.setProperty("--sp", "1");
-      setStage(steps);
-      return;
+      const id = requestAnimationFrame(() => setStage(steps));
+      return () => cancelAnimationFrame(id);
     }
     let raf = 0;
     const update = () => {
@@ -369,7 +369,9 @@ export function MagneticCursor() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia(FINE_QUERY).matches && !prefersReducedMotion()) setEnabled(true);
+    if (!window.matchMedia(FINE_QUERY).matches || prefersReducedMotion()) return;
+    const id = requestAnimationFrame(() => setEnabled(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   useEffect(() => {

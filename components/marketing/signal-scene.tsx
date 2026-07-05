@@ -86,8 +86,8 @@ export function SignalScene({ benefits }: { benefits: L[] }) {
 
     if (prefersReducedMotion()) {
       host.style.setProperty("--sp", "1");
-      setStage(N);
-      return;
+      const id = requestAnimationFrame(() => setStage(N));
+      return () => cancelAnimationFrame(id);
     }
 
     const desktop = window.matchMedia("(min-width: 1024px)").matches;

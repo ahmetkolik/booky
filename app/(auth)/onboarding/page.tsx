@@ -29,7 +29,7 @@ function toSlug(val: string): string {
 }
 
 export default function OnboardingPage() {
-  const { t, lang } = useLang();
+  const { lang } = useLang();
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);

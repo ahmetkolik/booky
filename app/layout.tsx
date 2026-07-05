@@ -33,9 +33,22 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(`https://${appConfig.domain}`),
   title: `${appConfig.name} — ${appConfig.tagline[DEFAULT_LANG]}`,
   description: appConfig.description[DEFAULT_LANG],
   applicationName: appConfig.name,
+  openGraph: {
+    title: `${appConfig.name} — ${appConfig.tagline[DEFAULT_LANG]}`,
+    description: appConfig.description[DEFAULT_LANG],
+    siteName: appConfig.name,
+    type: "website",
+    locale: DEFAULT_LANG === "tr" ? "tr_TR" : "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: `${appConfig.name} — ${appConfig.tagline[DEFAULT_LANG]}`,
+    description: appConfig.description[DEFAULT_LANG],
+  },
 };
 
 export default function RootLayout({

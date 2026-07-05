@@ -10,7 +10,6 @@ export default function ServicesPage() {
   const { t, lang } = useLang();
   const [selected, setSelected] = useState<Service | null>(services[0]);
 
-  const totalRevPotential = services.reduce((s, sv) => s + sv.price * sv.bookings30d, 0);
   const avgPrice = Math.round(services.reduce((s, sv) => s + sv.price, 0) / services.length);
   const mostBooked = [...services].sort((a, b) => b.bookings30d - a.bookings30d)[0];
 

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Lock } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
-import { AreaChart, SegmentedBar } from "@/components/app/charts";
+import { SegmentedBar } from "@/components/app/charts";
 import { useLang } from "@/components/i18n/language-provider";
 import { usePlan } from "@/components/app/plan-context";
 import { cn, formatPrice, formatMoney, minutesToLabel, minutesToHHMM, formatDuration, formatRelative } from "@/lib/utils";

@@ -15,8 +15,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { sendSms } from "@/lib/sms/client";
+import { sendSms, isSmsConfigured } from "@/lib/sms/client";
 import { buildSmsMessage, type ReminderType, type Lang } from "@/lib/sms/templates";
+import { bookingPage } from "@/lib/demo/data";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -45,8 +46,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing type, phone or data" }, { status: 400 });
   }
 
-  const message = buildSmsMessage(type, lang, data);
-  const result = await sendSms(phone, message);
+  // Default the directions link to the business location (Settings → Location;
+  // demo data until Supabase is wired) so the 2h reminder always carries it.
+  const message = buildSmsMessage(type, lang, { mapsUrl: bookingPage.mapsUrl, ...data });
 
+  // Demo mode: no Twilio keys — return the built message so the template
+  // (including the directions link) can be verified with a simple curl.
+  if (!isSmsConfigured()) {
+    return NextResponse.json({ success: false, demo: true, error: "not_configured", preview: message });
+  }
+
+  const result = await sendSms(phone, message);
   return NextResponse.json(result, { status: result.success ? 200 : 503 });
 }

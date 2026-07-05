@@ -22,7 +22,7 @@ export default function MarketingLayout({
             <Logo />
           </Link>
           <nav className="ml-auto hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
-            <a href="#demo" className="hover:text-foreground transition-colors">{ui.demoMode === "Demo modu" ? "Demo" : "Demo"}</a>
+            <a href="#demo" className="hover:text-foreground transition-colors">Demo</a>
             <a href="#features" className="hover:text-foreground transition-colors">{ui.features}</a>
             <a href="#how" className="hover:text-foreground transition-colors">{ui.howItWorks}</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">{ui.pricing}</a>

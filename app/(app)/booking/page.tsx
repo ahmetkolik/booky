@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, formatPrice, formatDuration, minutesToHHMM } from "@/lib/utils";
-import { bookingPage, serviceById, SERVICE_VAR, demoSlots, demoServices } from "@/lib/demo/data";
+import { bookingPage, serviceById, SERVICE_VAR, demoServices } from "@/lib/demo/data";
 
 const DEMO_URL = "booky.app/book/studio-lumiere";
 
