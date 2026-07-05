@@ -189,6 +189,9 @@ body {
 
 @keyframes pop { 0% { opacity: 0; transform: scale(0.92) translateY(6px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
 .animate-pop { animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Like animate-pop, but releases the element's own opacity/transform when done
+   (fill: backwards) — for blocks that keep state styles like the no-show fade. */
+.animate-pop-soft { animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 
 /* Staggered children helper for landing sections. */
 .stagger > * { opacity: 0; animation: floatUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -199,6 +202,156 @@ body {
 .stagger > *:nth-child(5) { animation-delay: 0.28s; }
 .stagger > *:nth-child(6) { animation-delay: 0.34s; }
 
+/* ── Award-motion layer ──────────────────────────────────────────────────────
+   Cinematic-but-warm motion for the landing page + dashboard. Everything below
+   is driven by components/marketing/motion.tsx (IntersectionObserver + rAF +
+   CSS custom properties) and is fully disabled by the reduced-motion block at
+   the very end of this file. */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Soft gradient blobs behind hero/CTA cards. */
+.blob { border-radius: 50%; filter: blur(46px); }
+
+/* Scroll-triggered entrance. JS toggles .is-in; vars set offset/rotation. */
+.reveal {
+  opacity: 0;
+  transform: translate(var(--rv-x, 0), var(--rv-y, 26px)) rotate(var(--rv-rot, 0deg)) scale(var(--rv-scale, 1));
+  transition:
+    opacity var(--rv-dur, 700ms) var(--ease-out) var(--rv-delay, 0ms),
+    transform var(--rv-dur, 700ms) var(--ease-out) var(--rv-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.is-in { opacity: 1; transform: none; }
+
+/* Kinetic type — words rise out of a clipped line. */
+.kinetic-word { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.kinetic-word > span { display: inline-block; transform: translateY(108%); animation: wordUp 0.85s var(--ease-out) both; }
+@keyframes wordUp { to { transform: translateY(0); } }
+
+/* Gentle heartbeat on the hero's gradient accent. */
+@keyframes accentPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.78; } }
+.accent-pulse { animation: accentPulse 3.2s ease-in-out infinite; }
+
+/* Spring pop — revenue counters jumping up with physicality. */
+@keyframes springPop {
+  0% { transform: scale(1) translateY(0); }
+  35% { transform: scale(1.14) translateY(-3px); }
+  65% { transform: scale(0.97) translateY(0); }
+  100% { transform: scale(1); }
+}
+.animate-spring-pop { animation: springPop 0.5s var(--ease-spring) both; display: inline-block; }
+
+/* Pop + one-shot glow for freshly landed booking blocks (--glow-c = service color). */
+@keyframes popGlow {
+  0% { opacity: 0; transform: scale(0.85) translateY(6px); box-shadow: 0 0 0 0 transparent; }
+  55% { opacity: 1; transform: scale(1.04) translateY(-1px); box-shadow: 0 0 0 4px color-mix(in oklch, var(--glow-c, var(--color-primary)) 25%, transparent), 0 6px 18px color-mix(in oklch, var(--glow-c, var(--color-primary)) 30%, transparent); }
+  100% { opacity: 1; transform: scale(1) translateY(0); box-shadow: 0 0 0 0 transparent; }
+}
+.animate-pop-glow { animation: popGlow 0.6s var(--ease-spring) both; }
+
+/* Signal-scene blocks: hidden until staged in, then pop with a glow flash. */
+.scene-block { opacity: 0; transform: scale(0.85) translateY(6px); }
+.scene-block.is-on { animation: popGlow 0.55s var(--ease-spring) both; }
+
+/* Pointer-tracking 3D tilt cards (transform set from JS). */
+.tilt-card { transition: transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out), border-color 0.45s var(--ease-out); will-change: transform; transform-style: preserve-3d; }
+.tilt-card:hover {
+  transition-duration: 0.06s, 0.45s, 0.45s;
+  box-shadow: 0 14px 44px color-mix(in oklch, var(--color-primary) 14%, transparent), var(--shadow-pop);
+  border-color: color-mix(in oklch, var(--color-primary) 35%, var(--color-border));
+}
+
+/* Magnetic wrapper — springs back when the cursor lets go. */
+.magnetic { display: inline-flex; transition: transform 0.35s var(--ease-spring); will-change: transform; }
+
+/* Custom cursor — coral dot + trailing ring; native cursor stays visible. */
+.cursor-dot, .cursor-ring {
+  position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none;
+  border-radius: 50%; opacity: 0;
+}
+.cursor-dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--color-primary); transition: opacity 0.3s ease; }
+.cursor-ring {
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border: 1.5px solid color-mix(in oklch, var(--color-primary) 55%, transparent);
+  background: color-mix(in oklch, var(--color-primary) 6%, transparent);
+  transition: opacity 0.3s ease;
+}
+
+/* Hairline read-progress bar pinned under the marketing header. */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: 2px;
+  background: var(--grad-brand);
+  transform: scaleX(0); transform-origin: left center;
+}
+
+/* Trusted-by marquee — content is duplicated once; loop shifts -50%. */
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent); mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent); }
+.marquee-track { display: flex; width: max-content; animation: marqueeScroll 36s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marqueeScroll { to { transform: translateX(-50%); } }
+
+/* Calendar showcase: the "now" line sweeping the day on its own. */
+@keyframes nowSweep { from { top: 4%; } to { top: 96%; } }
+.now-sweep { animation: nowSweep 46s linear infinite; }
+
+/* Calendar showcase: a block "drags itself" into an open slot when in view.
+   Positions match MiniSchedule's 40px gutter + 4 equal columns. */
+.drag-demo {
+  left: calc(40px + (100% - 40px) * 0.25 + 2px);
+  width: calc((100% - 40px) * 0.25 - 4px);
+  top: 150px;
+  opacity: 0;
+}
+.drag-demo.is-in { animation: dragDemo 1.7s var(--ease-spring) 0.5s both; }
+@keyframes dragDemo {
+  0% { opacity: 0; left: calc(40px + (100% - 40px) * 0.25 + 2px); top: 150px; transform: scale(0.9); box-shadow: none; }
+  20% { opacity: 1; transform: scale(1.06) rotate(-2deg); box-shadow: 0 10px 24px oklch(40% 0.03 20 / 0.22); }
+  75% { left: calc(40px + (100% - 40px) * 0.75 + 2px); top: 60px; transform: scale(1.06) rotate(1.5deg); box-shadow: 0 10px 24px oklch(40% 0.03 20 / 0.22); }
+  100% { opacity: 1; left: calc(40px + (100% - 40px) * 0.75 + 2px); top: 60px; transform: scale(1) rotate(0deg); box-shadow: none; }
+}
+
+/* Comparison table — Booky checks glow softly as they land. */
+@keyframes checkGlow {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-primary) 45%, transparent); }
+  100% { box-shadow: 0 0 0 9px transparent; }
+}
+.glow-check { animation: checkGlow 1s var(--ease-out) both; }
+
+/* How-it-works rail + reminder timeline paint with section progress (--sp). */
+.paint-x { transform: scaleX(var(--sp, 0)); transform-origin: left center; }
+.paint-y { transform: scaleY(var(--sp, 0)); transform-origin: center top; }
+
+/* Featured pricing tier lifts forward once revealed. */
+.tier-featured { transition: transform 0.8s var(--ease-spring), box-shadow 0.8s var(--ease-out); }
+.reveal.is-in .tier-featured { transform: scale(1.035); box-shadow: var(--shadow-pop); }
+@media (max-width: 1023px) { .reveal.is-in .tier-featured { transform: none; } }
+
+/* Hide scrollbars on the testimonial snap strip. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Dashboard: appointment drawer — rises on mobile, springs in from the right
+   once it becomes a side panel (xl). */
+@keyframes drawerIn { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: translateX(0); } }
+.drawer-anim { animation: floatUp 0.55s var(--ease-out) both; }
+@media (min-width: 1280px) { .drawer-anim { animation: drawerIn 0.6s var(--ease-spring) both; } }
+
+/* Dashboard: the live "now" line glides between minute updates. */
+.now-line { transition: top 1.2s linear; }
+
+/* ── Reduced motion: kill everything, land on the finished state ──────────── */
 @media (prefers-reduced-motion: reduce) {
-  *, .animate-float-up, .stagger > *, .sweep-flow, .drift, .animate-pop { animation: none !important; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .reveal, .stagger > *, .scene-block, .drag-demo { opacity: 1 !important; transform: none !important; }
+  .kinetic-word > span { transform: none !important; }
+  .marquee-track { flex-wrap: wrap; width: auto; justify-content: center; }
+  .now-sweep { top: 42% !important; }
+  .scroll-progress, .cursor-dot, .cursor-ring { display: none !important; }
+  /* No scroll-scrub: collapse the hero's tall scrub track to one screen. */
+  .scene-wrap { height: auto !important; }
+  .scene-host { position: static !important; height: auto !important; }
 }

@@ -6,6 +6,7 @@ import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLang } from "@/components/i18n/language-provider";
+import { MagneticCursor, ScrollProgressBar } from "@/components/marketing/motion";
 
 export default function MarketingLayout({
   children,
@@ -13,6 +14,8 @@ export default function MarketingLayout({
   const { ui } = useLang();
   return (
     <div className="flex min-h-dvh flex-col">
+      <MagneticCursor />
+      <ScrollProgressBar />
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center px-5">
           <Link href="/">

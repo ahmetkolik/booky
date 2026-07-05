@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Clock, CalendarPlus, Sparkles } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
+import { useParallax } from "@/components/marketing/motion";
 import { cn, formatPrice, formatDuration, minutesToHHMM } from "@/lib/utils";
 import { serviceById, SERVICE_VAR, demoServices, demoSlots } from "@/lib/demo/data";
 
@@ -25,6 +26,8 @@ export function BookingDemo() {
   const [slot, setSlot] = useState<number | null>(null);
   const [booked, setBooked] = useState<Booked[]>([]);
   const [pulse, setPulse] = useState(false);
+  // The two panels drift at slightly different speeds while scrolling by.
+  const { aRef, bRef } = useParallax(22);
 
   const baseRevenue = 842;
   const revenue = baseRevenue + booked.reduce((s, b) => s + serviceById(b.serviceId).price, 0);
@@ -42,7 +45,7 @@ export function BookingDemo() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
       {/* ── Left: the public booking widget ───────────────────────── */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+      <div ref={aRef} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
         <div className="flex items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
             <Sparkles className="h-4 w-4" />
@@ -124,15 +127,18 @@ export function BookingDemo() {
       </div>
 
       {/* ── Right: the owner's day strip + revenue ─────────────────── */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+      <div ref={bRef} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[13px] font-semibold leading-tight">{lang === "tr" ? "Senin panelin" : "Your dashboard"}</p>
             <p className="text-[11px] text-muted-foreground">{lang === "tr" ? "anında güncellenir" : "updates instantly"}</p>
           </div>
-          <div className={cn("rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-right transition-transform", pulse && "animate-pop")}>
+          <div className="rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-right">
             <p className="label-mono text-muted-foreground">{lang === "tr" ? "Bugünkü gelir" : "Revenue today"}</p>
-            <p className="tnum text-lg font-bold leading-none text-foreground">{formatPrice(revenue)}</p>
+            {/* keyed remount → the number springs up with every booking */}
+            <p key={revenue} className={cn("tnum text-lg font-bold leading-none text-foreground", pulse && "animate-spring-pop")}>
+              {formatPrice(revenue)}
+            </p>
           </div>
         </div>
 
@@ -146,8 +152,12 @@ export function BookingDemo() {
                 <span className="tnum w-12 shrink-0 text-[11px] text-muted-foreground">{minutesToHHMM(s.min)}</span>
                 {b && svcB ? (
                   <div
-                    className="animate-pop flex flex-1 items-center gap-2 overflow-hidden rounded-md border-l-[3px] px-2.5 py-1.5"
-                    style={{ background: `color-mix(in oklch, ${SERVICE_VAR[svcB.color]} 13%, white)`, borderColor: SERVICE_VAR[svcB.color] }}
+                    className="animate-pop-glow flex flex-1 items-center gap-2 overflow-hidden rounded-md border-l-[3px] px-2.5 py-1.5"
+                    style={{
+                      background: `color-mix(in oklch, ${SERVICE_VAR[svcB.color]} 13%, white)`,
+                      borderColor: SERVICE_VAR[svcB.color],
+                      ["--glow-c" as string]: SERVICE_VAR[svcB.color],
+                    }}
                   >
                     <span className="text-[12px] font-semibold" style={{ color: `color-mix(in oklch, ${SERVICE_VAR[svcB.color]} 70%, black)` }}>
                       {b.client}

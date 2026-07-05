@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -505,7 +505,7 @@ export default function DashboardPage() {
           </>
         )}
         {drawerOpen && selected && (
-          <aside className="fixed bottom-0 left-0 right-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-2xl animate-float-up xl:relative xl:bottom-auto xl:left-auto xl:right-auto xl:z-auto xl:max-h-none xl:rounded-none xl:sticky xl:top-2 xl:self-start">
+          <aside className="fixed bottom-0 left-0 right-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-2xl drawer-anim xl:relative xl:bottom-auto xl:left-auto xl:right-auto xl:z-auto xl:max-h-none xl:rounded-none xl:sticky xl:top-2 xl:self-start">
             <AppointmentDrawer appt={selected} onClose={() => setSelectedId(null)} lang={lang} t={t} />
 
             {/* Upcoming / no-show panel */}
@@ -620,6 +620,7 @@ function UpcomingCard({
 
 /* ── Day schedule grid (staff columns × time rows) ─────────────────────────── */
 function DaySchedule({
+  dayOffset,
   dayLabel,
   onPrev,
   onNext,
@@ -643,6 +644,20 @@ function DaySchedule({
   const totalSlots = (dayEndMin - dayStartMin) / slotMin;
   const gridH = totalSlots * rowH;
 
+  // Live "now" line — client-only (starts null so SSR markup matches), then
+  // refreshes every 20s; CSS transitions the glide between updates.
+  const [nowMin, setNowMin] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setNowMin(d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60);
+    };
+    tick();
+    const id = setInterval(tick, 20_000);
+    return () => clearInterval(id);
+  }, []);
+  const showNow = dayOffset === 0 && nowMin !== null && nowMin >= dayStartMin && nowMin <= dayEndMin;
+
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="flex flex-wrap items-center gap-2.5 border-b border-border p-4">
@@ -662,8 +677,8 @@ function DaySchedule({
 
       <div className="overflow-x-auto">
         <div className="min-w-[640px]">
-          {/* staff header */}
-          <div className="grid border-b border-border" style={{ gridTemplateColumns: `56px repeat(${staff.length}, 1fr)` }}>
+          {/* staff header — columns settle in one by one on first mount */}
+          <div className="stagger grid border-b border-border" style={{ gridTemplateColumns: `56px repeat(${staff.length}, 1fr)` }}>
             <div />
             {staff.map((s) => (
               <div key={s.id} className="flex items-center gap-2 px-3 py-2.5">
@@ -677,7 +692,22 @@ function DaySchedule({
           </div>
 
           {/* grid body */}
-          <div className="grid" style={{ gridTemplateColumns: `56px repeat(${staff.length}, 1fr)` }}>
+          <div className="relative grid" style={{ gridTemplateColumns: `56px repeat(${staff.length}, 1fr)` }}>
+            {/* live "now" line gliding down the day */}
+            {showNow && (
+              <div
+                className="now-line pointer-events-none absolute inset-x-0 z-20"
+                style={{ top: ((nowMin! - dayStartMin) / slotMin) * rowH }}
+                aria-hidden
+              >
+                <div className="relative ml-14 border-t-[1.5px] border-primary/80">
+                  <span className="absolute -left-1 -top-[4.5px] h-2 w-2 rounded-full bg-primary" />
+                  <span className="absolute -top-2.5 right-1 rounded-full bg-primary px-1.5 py-px text-[8.5px] font-bold uppercase tracking-wide text-primary-foreground">
+                    {lang === "tr" ? "şimdi" : "now"}
+                  </span>
+                </div>
+              </div>
+            )}
             {/* time gutter */}
             <div className="relative" style={{ height: gridH }}>
               {Array.from({ length: totalSlots + 1 }).map((_, i) => {
@@ -707,7 +737,7 @@ function DaySchedule({
                       />
                     );
                   })}
-                  {/* appointment blocks */}
+                  {/* appointment blocks — staggered pop on first mount */}
                   {colAppts.map((a) => {
                     const svc = serviceById(a.serviceId);
                     const top = ((a.startMin - dayStartMin) / slotMin) * rowH;
@@ -715,12 +745,13 @@ function DaySchedule({
                     const color = SERVICE_VAR[svc.color];
                     const active = a.id === selectedId;
                     const faded = a.status === "no-show";
+                    const order = appts.indexOf(a);
                     return (
                       <button
                         key={a.id}
                         onClick={() => onSelect(a.id)}
                         className={cn(
-                          "absolute inset-x-1 overflow-hidden rounded-md border-l-[3px] px-2 py-1 text-left transition-all hover:z-10 hover:shadow-pop",
+                          "animate-pop-soft absolute inset-x-1 overflow-hidden rounded-md border-l-[3px] px-2 py-1 text-left transition-all hover:z-10 hover:shadow-pop",
                           active ? "z-10 ring-2 ring-offset-1 ring-offset-card" : "",
                           faded && "opacity-55",
                         )}
@@ -729,6 +760,7 @@ function DaySchedule({
                           height: Math.max(height - 2, 22),
                           background: `color-mix(in oklch, ${color} 13%, white)`,
                           borderColor: color,
+                          animationDelay: `${120 + order * 45}ms`,
                           ...(active ? ({ "--tw-ring-color": color } as React.CSSProperties) : {}),
                         }}
                         title={`${a.client} · ${t(svc.name)}`}
