@@ -164,7 +164,10 @@ function CopyButton({ text }: { text: string }) {
   const { lang } = useLang();
   const [copied, setCopied] = useState(false);
   function copy() {
-    navigator.clipboard.writeText(`https://${text}`).catch(() => {});
+    // Clipboard API is absent on non-secure origins — feedback must not depend on it.
+    try {
+      navigator.clipboard?.writeText(`https://${text}`).catch(() => {});
+    } catch {}
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   }
@@ -189,7 +192,9 @@ export default function BookingPage() {
     if (navigator.share) {
       navigator.share({ title: bookingInfo.business, url }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(url).catch(() => {});
+      try {
+        navigator.clipboard?.writeText(url).catch(() => {});
+      } catch {}
       setShared(true);
       setTimeout(() => setShared(false), 1800);
     }

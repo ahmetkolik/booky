@@ -192,6 +192,7 @@ interface WorkspaceValue {
   ready: boolean;
   isDemo: boolean;
   business: WorkspaceBusiness;
+  setBusiness: (b: WorkspaceBusiness) => void;
   location: WorkspaceLocation;
   setLocation: (loc: WorkspaceLocation) => void;
 
@@ -312,6 +313,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ready,
       isDemo,
       business: ws.business,
+      setBusiness: (b) => persistWs({ ...ws, business: b }),
       location: ws.location,
       setLocation: (loc) => persistWs({ ...ws, location: loc }),
 

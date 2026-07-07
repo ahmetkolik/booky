@@ -13,16 +13,19 @@ import { useWorkspace } from "@/components/app/workspace-context";
 
 export function SettingsClient({ connected }: { connected: Record<string, boolean> }) {
   const { t, ui, lang } = useLang();
-  const { location, setLocation, business } = useWorkspace();
+  const { location, setLocation, business, setBusiness } = useWorkspace();
 
-  // Business location — feeds the booking page and the "directions" link in
-  // reminder SMS. Saved into the workspace (localStorage until Supabase is wired).
+  // Business profile + location — feed the booking page and the "directions"
+  // link in reminder SMS. Saved into the workspace (localStorage until Supabase is wired).
+  const [bizName, setBizName] = useState(business.name);
+  const [bizEmail, setBizEmail] = useState(business.email);
   const [address, setAddress] = useState(location.address);
   const [mapsUrl, setMapsUrl] = useState(location.mapsUrl);
   const [saved, setSaved] = useState(false);
-  const pickOnMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || business.name)}`;
+  const pickOnMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || bizName)}`;
 
   function save() {
+    setBusiness({ ...business, name: bizName.trim() || business.name, email: bizEmail.trim() || business.email });
     setLocation({ address: address.trim(), mapsUrl: mapsUrl.trim() });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -48,6 +51,28 @@ export function SettingsClient({ connected }: { connected: Record<string, boolea
           <div className="space-y-1.5 sm:col-span-2">
             <Label>{ui.tagline}</Label>
             <Input defaultValue={t(appConfig.tagline)} readOnly />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Business profile — editable, persisted to the workspace */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{lang === "tr" ? "İşletme profili" : "Business profile"}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {lang === "tr"
+              ? "Rezervasyon sayfanda ve hatırlatma SMS'lerinde görünen işletme bilgileri."
+              : "Business details shown on your booking page and in reminder SMS."}
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>{lang === "tr" ? "İşletme adı" : "Business name"}</Label>
+            <Input value={bizName} onChange={(e) => setBizName(e.target.value)} placeholder={lang === "tr" ? "Örn. Studio Lumière" : "e.g. Studio Lumière"} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{lang === "tr" ? "İletişim e-postası" : "Contact email"}</Label>
+            <Input value={bizEmail} onChange={(e) => setBizEmail(e.target.value)} placeholder="owner@business.com" />
           </div>
         </CardContent>
       </Card>

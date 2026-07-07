@@ -238,6 +238,8 @@ export const bookingPage = {
   options: ["s1", "s2", "s4", "s5"],
   /** Open slots for the picked day (minutes from midnight). */
   slots: [9 * 60, 10 * 60 + 30, 11 * 60, 13 * 60, 14 * 60 + 30, 16 * 60],
+  /** Already-taken slots for the picked day — shown disabled on the widget. */
+  bookedSlots: [10 * 60, 12 * 60, 15 * 60],
 };
 
 /* ── Recent activity feed ───────────────────────────────────────────────────── */

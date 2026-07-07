@@ -274,15 +274,20 @@ export default function BookingPage() {
                   {lang === "tr" ? "Müsait saatler" : "Available times"}
                 </p>
                 <div className="grid grid-cols-4 gap-2">
-                  {business.slots.map((min) => {
+                  {[...business.slots, ...business.bookedSlots].sort((a, b) => a - b).map((min) => {
+                    const booked = business.bookedSlots.includes(min);
                     const sel = selectedSlot === min;
                     return (
                       <button
                         key={min}
+                        disabled={booked}
+                        aria-disabled={booked}
                         onClick={() => setSelectedSlot(min)}
                         className={cn(
                           "tnum rounded-xl border py-2.5 text-center text-[13px] font-medium transition-all",
-                          sel ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border hover:border-primary/50",
+                          booked
+                            ? "cursor-not-allowed border-border/60 bg-muted/50 text-muted-foreground/50 line-through"
+                            : sel ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border hover:border-primary/50",
                         )}
                       >
                         {minutesToHHMM(min)}
@@ -290,6 +295,9 @@ export default function BookingPage() {
                     );
                   })}
                 </div>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  {lang === "tr" ? "Üstü çizili saatler dolu." : "Struck-through times are already booked."}
+                </p>
               </div>
 
               {svc.deposit > 0 && (

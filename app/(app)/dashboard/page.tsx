@@ -91,7 +91,10 @@ export default function DashboardPage() {
   const dayLabel = DAY_LABELS[dayOffset + 1] ?? { tr: "Gün", en: "Day" };
 
   function copyBookingLink() {
-    navigator.clipboard.writeText(`https://${bookingInfo.url}`).catch(() => {});
+    // Clipboard API is absent on non-secure origins — feedback must not depend on it.
+    try {
+      navigator.clipboard?.writeText(`https://${bookingInfo.url}`).catch(() => {});
+    } catch {}
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 1800);
   }

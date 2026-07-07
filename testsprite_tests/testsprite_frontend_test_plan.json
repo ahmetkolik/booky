@@ -1,0 +1,1194 @@
+[
+  {
+    "id": "TC001",
+    "title": "Complete a public booking from service selection to confirmation",
+    "description": "A customer can book an appointment on the public booking page by selecting a service and time, entering contact details, and confirming the appointment.",
+    "category": "Public booking page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /book/demo"
+      },
+      {
+        "type": "action",
+        "description": "Select a service"
+      },
+      {
+        "type": "action",
+        "description": "Select a staff member"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid date"
+      },
+      {
+        "type": "action",
+        "description": "Select a valid time"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the contact information fields"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the booking"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a booking confirmation is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the booked appointment is shown in the success state"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Enter the dashboard through demo login",
+    "description": "A user can submit the login form and land in the dashboard experience without needing real authentication.",
+    "category": "Authentication (demo bypass)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Open an appointment and update its status",
+    "description": "A scheduler can open an appointment from the dashboard and change its status from the detail drawer. Available statuses are 'Rezerve' (booked), 'Geldi' (arrived), 'Tamamlandı' (completed), 'Gelmedi' (no-show) — there is intentionally no separate 'confirmed' status.",
+    "category": "Dashboard (booking cockpit)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open an appointment from the appointments list"
+      },
+      {
+        "type": "action",
+        "description": "In the detail drawer, change the appointment status using one of the available status actions (for example mark it as completed / 'Tamamlandı'). Do NOT look for a 'confirmed' or 'Onaylandı' option — it does not exist by design."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the appointment detail drawer remains visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated appointment status (e.g. 'Tamamlandı') is reflected in the drawer or list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Book an appointment through the public booking flow",
+    "description": "This test verifies that a customer can complete the public booking journey from service selection through confirmation.",
+    "category": "Public booking page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /book/demo"
+      },
+      {
+        "type": "action",
+        "description": "Select a service"
+      },
+      {
+        "type": "action",
+        "description": "Select an available staff member"
+      },
+      {
+        "type": "action",
+        "description": "Pick a valid date"
+      },
+      {
+        "type": "action",
+        "description": "Choose an available time slot"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer name field with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer phone field with a valid phone number"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the booking"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a booking confirmation screen is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the appointment is shown as confirmed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Switch landing page language and reach auth entry points",
+    "description": "A visitor can switch between TR and EN on the landing page, review the booking/demo area, and navigate to login or signup from the marketing page.",
+    "category": "Marketing landing page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the landing page sections"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the language to English"
+      },
+      {
+        "type": "action",
+        "description": "Interact with the booking widget demo"
+      },
+      {
+        "type": "action",
+        "description": "Click the login link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login screen is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the signup link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the signup screen is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Use demo access from the login screen",
+    "description": "A user can enter the dashboard directly from the login screen using the demo access path.",
+    "category": "Authentication (demo bypass)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Click the demo access button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Enter the dashboard through demo signup and onboarding",
+    "description": "A user submits the signup form, is routed to the 3-step onboarding (by design), completes it, and lands in the dashboard.",
+    "category": "Authentication (demo bypass)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signup"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the signup form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the onboarding page is displayed (heading like 'İşletmeni tanıtalım', URL /onboarding) — this is the expected post-signup destination"
+      },
+      {
+        "type": "action",
+        "description": "Step 1: fill the business name field (e.g. 'Test Salon'); the slug auto-fills. Click 'Devam et'"
+      },
+      {
+        "type": "action",
+        "description": "Step 2: select a business category from the grid (e.g. 'Berber'). Click 'Devam et'"
+      },
+      {
+        "type": "action",
+        "description": "Step 3: click the final confirmation button to finish onboarding"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard is displayed (URL /dashboard)"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Review the dashboard overview and schedule",
+    "description": "A dashboard user can review the core workspace including summary metrics, schedule visibility, revenue trends, and alerts.",
+    "category": "Dashboard (booking cockpit)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify summary metrics are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the schedule grid and upcoming alerts are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Choose any available staff member for booking",
+    "description": "This test verifies that a customer can continue booking by choosing any available staff member when no specific provider is required.",
+    "category": "Public booking page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /book/demo"
+      },
+      {
+        "type": "action",
+        "description": "Select a service"
+      },
+      {
+        "type": "action",
+        "description": "Choose any available staff member option"
+      },
+      {
+        "type": "action",
+        "description": "Pick a valid date"
+      },
+      {
+        "type": "action",
+        "description": "Choose an available time slot"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer name field with a unique name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer phone field with a valid phone number"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the booking"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a booking confirmation screen is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Open checkout initiation from pricing on the landing page",
+    "description": "A visitor can click a pricing call to action on the marketing page and begin the checkout flow.",
+    "category": "Marketing landing page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the pricing section"
+      },
+      {
+        "type": "action",
+        "description": "Click a pricing call to action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a checkout initiation is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Add a new service to the catalog",
+    "description": "This verifies that a user can create a service with duration, price, and color and see it appear in the service list.",
+    "category": "Services management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /services"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new service"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the service name with a unique value"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid duration for the service"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a valid price for the service"
+      },
+      {
+        "type": "action",
+        "description": "Select a service color"
+      },
+      {
+        "type": "action",
+        "description": "Save the service"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new service appears in the list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Add and edit a service with scheduling details",
+    "description": "A service manager can create or update a service with duration, price, and color and see it reflected in the services workspace.",
+    "category": "Services management panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /services"
+      },
+      {
+        "type": "action",
+        "description": "Add a new service"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the service details"
+      },
+      {
+        "type": "action",
+        "description": "Save the service"
+      },
+      {
+        "type": "action",
+        "description": "Edit the newly created service"
+      },
+      {
+        "type": "action",
+        "description": "Update the service details"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the service appears in the services list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated service details are reflected"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Update business profile information",
+    "description": "This verifies that a user can edit business profile details and see the updated information reflected in settings.",
+    "category": "Settings & integrations",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Edit the business profile name field with a new business name"
+      },
+      {
+        "type": "action",
+        "description": "Edit the business profile contact field with a new contact value"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated business profile information is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a saved changes confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Add and edit a staff member with working hours",
+    "description": "A staff manager can create or update a staff profile with working hours and see it reflected in the staff workspace.",
+    "category": "Staff management panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /staff"
+      },
+      {
+        "type": "action",
+        "description": "Add a new staff member"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the staff details and working hours"
+      },
+      {
+        "type": "action",
+        "description": "Save the staff member"
+      },
+      {
+        "type": "action",
+        "description": "Edit the newly created staff member"
+      },
+      {
+        "type": "action",
+        "description": "Update the staff details and working hours"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the staff member appears in the staff list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated working hours are reflected"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "Browse the calendar and inspect an appointment",
+    "description": "This verifies that a user can open the calendar, switch the viewed date, and inspect appointment blocks and details.",
+    "category": "Calendar",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /calendar"
+      },
+      {
+        "type": "action",
+        "description": "Switch the displayed date"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify appointment blocks are displayed for staff members"
+      },
+      {
+        "type": "action",
+        "description": "Select an appointment block"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify appointment details are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC016",
+    "title": "Move between workspace sections from the dashboard sidebar",
+    "description": "A dashboard user can use the sidebar to reach calendar, clients, services, staff, booking, and settings sections.",
+    "category": "Dashboard (booking cockpit)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open the calendar section from the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Open the clients section from the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Open the services section from the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Open the staff section from the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Open the booking section from the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Open the settings section from the sidebar"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify each corresponding section is displayed during navigation"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC017",
+    "title": "Edit an existing service and keep changes visible",
+    "description": "This verifies that a user can update an existing service and see the revised service information in the list.",
+    "category": "Services management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /services"
+      },
+      {
+        "type": "action",
+        "description": "Select an existing service for editing"
+      },
+      {
+        "type": "action",
+        "description": "Update the service name"
+      },
+      {
+        "type": "action",
+        "description": "Update the service duration"
+      },
+      {
+        "type": "action",
+        "description": "Update the service price"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated service appears in the list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC018",
+    "title": "Review business settings and integration status",
+    "description": "This verifies that a user can open settings and review the business profile and integration status panels successfully.",
+    "category": "Settings & integrations",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the business profile section is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the integration status section is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC019",
+    "title": "Open a client record from the directory",
+    "description": "This verifies that a user can browse or search clients and open a client profile to review contact information and visit history.",
+    "category": "Clients",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /clients"
+      },
+      {
+        "type": "action",
+        "description": "Browse or search the client list"
+      },
+      {
+        "type": "action",
+        "description": "Open a client record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify client contact information is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify visit history is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC020",
+    "title": "Update an existing staff member",
+    "description": "This test verifies that a manager can edit an existing staff member's details and working hours and see the updated information in the list.",
+    "category": "Staff management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /staff"
+      },
+      {
+        "type": "action",
+        "description": "Select an existing staff member"
+      },
+      {
+        "type": "action",
+        "description": "Open the edit form for the selected staff member"
+      },
+      {
+        "type": "action",
+        "description": "Change the staff details to a new valid value"
+      },
+      {
+        "type": "action",
+        "description": "Update the working hours to a valid schedule"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the staff list shows the updated staff information"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated working hours are visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC021",
+    "title": "Preview the public booking page and copy the booking link",
+    "description": "An admin can preview the public booking page from the dashboard and use the booking link control to copy the shareable link.",
+    "category": "Booking page preview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open the booking preview section from the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Copy the booking link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the booking preview is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a copy confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC022",
+    "title": "Search clients and open a client detail view",
+    "description": "A client manager can find a client in the list and open the client detail view to review their record.",
+    "category": "Client management panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /clients"
+      },
+      {
+        "type": "action",
+        "description": "Search for a client"
+      },
+      {
+        "type": "action",
+        "description": "Open the matching client record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filtered client list is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the client detail view is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC023",
+    "title": "Preview the public booking page from the dashboard",
+    "description": "This test verifies that an admin can open the booking preview and review the public booking experience before sharing it.",
+    "category": "Booking page preview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /booking"
+      },
+      {
+        "type": "action",
+        "description": "Review the booking page preview"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the public booking page preview is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the booking experience layout is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC024",
+    "title": "View the calendar schedule by staff and time",
+    "description": "This verifies that the calendar day view shows scheduled appointment blocks organized by staff members and time slots.",
+    "category": "Calendar",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /calendar"
+      },
+      {
+        "type": "action",
+        "description": "Review the displayed schedule"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify staff columns are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify time-based appointment blocks are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC025",
+    "title": "Switch the dashboard language while reviewing workspace content",
+    "description": "A bilingual user can switch the dashboard language between TR and EN without losing access to the workspace view.",
+    "category": "Dashboard (booking cockpit)",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the language to English"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the language back to Turkish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard workspace remains displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the language change is reflected in the interface"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC026",
+    "title": "Copy the public booking link",
+    "description": "This test verifies that an admin can copy the shareable booking link from the booking preview page and receive confirmation feedback.",
+    "category": "Booking page preview",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /booking"
+      },
+      {
+        "type": "action",
+        "description": "Copy the public booking link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a copy confirmation is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the booking link remains available on the page"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC027",
+    "title": "Search clients and open the matching record",
+    "description": "This verifies that a user can search the client directory and open a matching client profile from the filtered results.",
+    "category": "Clients",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /clients"
+      },
+      {
+        "type": "action",
+        "description": "Search for a client"
+      },
+      {
+        "type": "action",
+        "description": "Open the matching client record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected client profile is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the client's visit history is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC028",
+    "title": "Use AI search from the dashboard",
+    "description": "This verifies that a dashboard user can submit a query in AI search and receive an assistant response.",
+    "category": "AI search / assistant",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Open the AI search box"
+      },
+      {
+        "type": "action",
+        "description": "Type a query into the AI search field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the query"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an assistant response is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the submitted query is reflected in the conversation"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC029",
+    "title": "Switch between calendar dates without losing the schedule view",
+    "description": "This verifies that a user can change the displayed calendar date and still see appointment blocks for the selected day.",
+    "category": "Calendar",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /calendar"
+      },
+      {
+        "type": "action",
+        "description": "Switch to another displayed date"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the schedule updates for the selected date"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify appointment blocks remain visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC030",
+    "title": "Change settings plan or language option",
+    "description": "This verifies that a user can change the displayed settings option and see the selection update.",
+    "category": "Settings & integrations",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings"
+      },
+      {
+        "type": "action",
+        "description": "Change the displayed plan or language option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected option is updated"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the settings view reflects the new selection"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC031",
+    "title": "Prevent booking submission without required contact details",
+    "description": "This test verifies that the booking form requires contact information before confirming an appointment and displays validation feedback.",
+    "category": "Public booking page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /book/demo"
+      },
+      {
+        "type": "action",
+        "description": "Select a service"
+      },
+      {
+        "type": "action",
+        "description": "Select an available staff member"
+      },
+      {
+        "type": "action",
+        "description": "Pick a valid date"
+      },
+      {
+        "type": "action",
+        "description": "Choose an available time slot"
+      },
+      {
+        "type": "action",
+        "description": "Leave the contact details incomplete"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to confirm the booking"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a contact validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the booking is not confirmed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC032",
+    "title": "Review dashboard AI search empty and ready state",
+    "description": "This verifies that the dashboard AI search entry point is available and ready for queries without requiring prior interaction.",
+    "category": "AI search / assistant",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the AI search entry point is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dashboard workspace is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC033",
+    "title": "Show unavailable times as non-selectable during booking",
+    "description": "This test verifies that the booking flow prevents customers from selecting unavailable time slots and only allows valid appointment times.",
+    "category": "Public booking page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /book/demo"
+      },
+      {
+        "type": "action",
+        "description": "Select a service"
+      },
+      {
+        "type": "action",
+        "description": "Select an available staff member"
+      },
+      {
+        "type": "action",
+        "description": "Pick a valid date"
+      },
+      {
+        "type": "action",
+        "description": "Review the displayed time slots — booked (unavailable) times render greyed-out with line-through styling and a disabled attribute (e.g. 10:00, 12:00, 15:00)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the booked time slots are disabled and cannot be selected (clicking them does not highlight them)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify at least one available time slot can be selected"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC034",
+    "title": "Handle an empty service form submission",
+    "description": "This verifies that the service form prevents saving when required details are missing and shows validation feedback.",
+    "category": "Services management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /services"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new service"
+      },
+      {
+        "type": "action",
+        "description": "Submit the form without filling required fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the service is not added to the list"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC035",
+    "title": "Reject an invalid staff form submission",
+    "description": "This test verifies that the staff form blocks saving when required staff details are incomplete or invalid and shows validation feedback.",
+    "category": "Staff management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /staff"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new staff member"
+      },
+      {
+        "type": "action",
+        "description": "Leave a required staff detail empty"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to save the staff member"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a validation error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the staff member is not added to the list"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC036",
+    "title": "Show an empty state when a fresh workspace has no staff",
+    "description": "This test verifies that a brand-new (fresh) workspace — created via signup and onboarding — shows an empty state on the staff page, since fresh workspaces start with zero staff. NOTE: the demo session always seeds 4 staff members; the empty state is only reachable in a fresh workspace.",
+    "category": "Staff management",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /signup and submit the form (demo bypass — any values work)"
+      },
+      {
+        "type": "action",
+        "description": "On /onboarding step 1, enter business name 'Bos Salon' and click 'Devam et'"
+      },
+      {
+        "type": "action",
+        "description": "On step 2, select a category (e.g. 'Berber') and click 'Devam et'"
+      },
+      {
+        "type": "action",
+        "description": "On step 3, click the finish button to enter the dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /staff"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the empty state message 'Henüz personel yok' is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no staff cards are shown and an 'İlk personelini ekle' button is offered"
+      }
+    ],
+    "priority": "Low"
+  }
+]

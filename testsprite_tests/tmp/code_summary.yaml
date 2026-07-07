@@ -1,0 +1,247 @@
+version: "2"
+type: frontend
+tech_stack:
+  - TypeScript
+  - Next.js 16 (App Router)
+  - React 19
+  - Tailwind CSS v4
+  - Supabase (optional, demo bypass when unconfigured)
+  - Stripe (optional)
+  - Twilio SMS (optional)
+routes:
+  - path: /
+    file: app/(marketing)/page.tsx
+    auth_required: false
+    description: Marketing landing page with scroll-driven hero, pricing, booking widget demo, TR/EN language toggle
+  - path: /login
+    file: app/(auth)/login/page.tsx
+    auth_required: false
+    description: Login screen (demo bypass — any submit or "Continue with demo" enters the dashboard)
+  - path: /signup
+    file: app/(auth)/signup/page.tsx
+    auth_required: false
+    description: Signup screen (demo bypass, same as login)
+  - path: /onboarding
+    file: app/(auth)/onboarding/page.tsx
+    auth_required: false
+    description: Post-signup onboarding flow (business info, services, staff)
+  - path: /dashboard
+    file: app/(app)/dashboard/page.tsx
+    auth_required: false
+    description: Booking cockpit — stat row, day schedule (staff columns × time rows), appointments list with right detail drawer, revenue chart, upcoming/no-show panel
+  - path: /calendar
+    file: app/(app)/calendar/page.tsx
+    auth_required: false
+    description: Calendar view of appointments
+  - path: /clients
+    file: app/(app)/clients/page.tsx
+    auth_required: false
+    description: Client list and details
+  - path: /services
+    file: app/(app)/services/page.tsx
+    auth_required: false
+    description: Services management panel (add/edit services, price, duration, color)
+  - path: /staff
+    file: app/(app)/staff/page.tsx
+    auth_required: false
+    description: Staff management panel (add/edit staff, working hours)
+  - path: /settings
+    file: app/(app)/settings/page.tsx
+    auth_required: false
+    description: Business settings — brand, integrations (Supabase, Stripe, Google Calendar, Twilio), plan
+  - path: /booking
+    file: app/(app)/booking/page.tsx
+    auth_required: false
+    description: Public booking-page preview/editor inside the dashboard
+  - path: /book/demo
+    file: app/(public)/book/[slug]/page.tsx
+    auth_required: false
+    description: Public customer-facing booking page (pick service → staff → date/time → contact info → confirm)
+features:
+  - name: Marketing landing page
+    description: Scroll-scrubbed hero, feature sections, pricing cards, interactive booking widget demo, TR/EN toggle
+    files:
+      - app/(marketing)/page.tsx
+      - components/marketing/signal-scene.tsx
+      - components/marketing/booking-demo.tsx
+      - components/marketing/checkout-button.tsx
+    entry_route: /
+    user_interactions:
+      - Scroll through hero and feature sections
+      - Toggle language between TR and EN in navbar
+      - Interact with the embedded booking widget demo
+      - Click pricing plan CTA buttons
+      - Navigate to /login and /signup via navbar links
+    api_calls:
+      - method: POST
+        endpoint: /api/stripe/checkout
+    auth_required: false
+  - name: Authentication (demo bypass)
+    description: Login and signup screens; Supabase not connected so any submit or "Continue with demo" enters the dashboard
+    files:
+      - app/(auth)/login/page.tsx
+      - app/(auth)/signup/page.tsx
+      - components/auth/auth-screen.tsx
+    entry_route: /login
+    user_interactions:
+      - Fill email and password fields
+      - Click submit button — redirected to /dashboard (demo bypass)
+      - Click "Continue with demo" button — redirected to /dashboard
+      - Toggle TR/EN language on the auth page
+    api_calls: []
+    auth_required: false
+  - name: Dashboard (booking cockpit)
+    description: Stat row, day schedule grid with staff columns and colored service blocks, appointments list opening a right detail drawer, revenue area chart, upcoming/no-show panel; renders demo data from lib/demo/data.ts when no keys configured
+    files:
+      - app/(app)/dashboard/page.tsx
+      - components/app/charts.tsx
+      - components/app/sidebar.tsx
+      - components/app/topbar.tsx
+      - components/app/workspace-context.tsx
+      - lib/demo/data.ts
+    entry_route: /dashboard
+    user_interactions:
+      - View stat tiles and revenue chart
+      - Click an appointment in the list to open the right detail drawer
+      - Change appointment status (confirm, cancel, no-show) from the drawer
+      - Navigate between sections via grouped sidebar (Workspace / Setup)
+      - Toggle TR/EN language in the topbar
+    api_calls: []
+    auth_required: false
+  - name: Calendar
+    description: Day/week schedule view of appointments per staff member
+    files:
+      - app/(app)/calendar/page.tsx
+    entry_route: /calendar
+    user_interactions:
+      - Switch dates
+      - View appointment blocks colored by service
+      - Click a block to see appointment details
+    api_calls: []
+    auth_required: false
+  - name: Services management
+    description: List, add, and edit services (name, duration, price, color)
+    files:
+      - app/(app)/services/page.tsx
+      - components/app/forms.tsx
+    entry_route: /services
+    user_interactions:
+      - View service list
+      - Click add-service button and fill the form
+      - Edit an existing service
+    api_calls: []
+    auth_required: false
+  - name: Staff management
+    description: List, add, and edit staff members and working hours
+    files:
+      - app/(app)/staff/page.tsx
+      - components/app/forms.tsx
+    entry_route: /staff
+    user_interactions:
+      - View staff list
+      - Add a staff member via form
+      - Edit staff details and working hours
+    api_calls: []
+    auth_required: false
+  - name: Clients
+    description: Client list with visit history and contact info
+    files:
+      - app/(app)/clients/page.tsx
+    entry_route: /clients
+    user_interactions:
+      - Browse/search client list
+      - Open a client to view details and history
+    api_calls: []
+    auth_required: false
+  - name: Public booking page
+    description: Customer-facing booking flow — choose service, staff, date and time slot, enter contact info, confirm appointment
+    files:
+      - app/(public)/book/[slug]/page.tsx
+    entry_route: /book/demo
+    user_interactions:
+      - Select a service
+      - Select a staff member (or any)
+      - Pick a date and an available time slot
+      - Enter name and phone
+      - Confirm booking and see confirmation screen
+    api_calls: []
+    auth_required: false
+  - name: Booking page preview
+    description: Dashboard panel previewing and configuring the public booking page
+    files:
+      - app/(app)/booking/page.tsx
+    entry_route: /booking
+    user_interactions:
+      - Preview the public booking page
+      - Copy the public booking link
+    api_calls: []
+    auth_required: false
+  - name: Settings & integrations
+    description: Business profile, brand, plan enforcement and integration status (Supabase, Stripe, Google Calendar, Twilio)
+    files:
+      - app/(app)/settings/page.tsx
+      - components/app/settings-client.tsx
+    entry_route: /settings
+    user_interactions:
+      - Edit business profile fields
+      - View integration connection status
+      - Change language / plan options
+    api_calls: []
+    auth_required: false
+  - name: AI search / assistant
+    description: AI-powered search or chat in the dashboard
+    files:
+      - components/app/ai-search.tsx
+      - app/api/ai/chat/route.ts
+    entry_route: /dashboard
+    user_interactions:
+      - Open the AI search box
+      - Type a query and submit
+    api_calls:
+      - method: POST
+        endpoint: /api/ai/chat
+    auth_required: false
+  - name: SMS reminders (backend)
+    description: Twilio-backed appointment reminder endpoints; no-op without Twilio keys
+    files:
+      - app/api/reminders/send/route.ts
+      - app/api/reminders/cron/route.ts
+      - lib/sms/client.ts
+      - lib/sms/templates.ts
+    entry_route: /dashboard
+    user_interactions:
+      - Trigger reminder send from appointment drawer (if wired)
+    api_calls:
+      - method: POST
+        endpoint: /api/reminders/send
+      - method: GET
+        endpoint: /api/reminders/cron
+    auth_required: false
+  - name: Stripe checkout (backend)
+    description: Subscription checkout and webhook; disabled without Stripe keys
+    files:
+      - app/api/stripe/checkout/route.ts
+      - app/api/stripe/webhook/route.ts
+      - lib/stripe/plans.ts
+    entry_route: /
+    user_interactions:
+      - Click a pricing CTA to start checkout
+    api_calls:
+      - method: POST
+        endpoint: /api/stripe/checkout
+      - method: POST
+        endpoint: /api/stripe/webhook
+    auth_required: false
+known_limitations:
+  - issue: Demo mode — no Supabase/Stripe/Twilio keys in .env.local, so all data comes from lib/demo/data.ts and mutations are local state only
+    location: lib/demo/data.ts
+    impact: Created/edited appointments, services, staff and clients are not persisted across reloads
+  - issue: Auth is a demo bypass — submitting login/signup always enters the dashboard without real authentication
+    location: components/auth/auth-screen.tsx
+    impact: No credential validation or error states to test
+  - issue: Stripe checkout and SMS reminder endpoints return errors or no-ops without API keys
+    location: app/api/stripe/checkout/route.ts, app/api/reminders/send/route.ts
+    impact: Payment and reminder flows cannot complete end-to-end in demo mode
+  - issue: App is bilingual (TR default) — UI strings appear in Turkish by default
+    location: lib/i18n/config.ts
+    impact: Tests must match Turkish labels or switch language to EN first
