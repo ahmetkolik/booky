@@ -22,23 +22,16 @@ import { Lock } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { SegmentedBar } from "@/components/app/charts";
 import { useLang } from "@/components/i18n/language-provider";
-import { usePlan } from "@/components/app/plan-context";
+import { useWorkspace } from "@/components/app/workspace-context";
+import { useNewAppointment } from "@/components/app/forms";
 import { cn, formatPrice, formatMoney, minutesToLabel, minutesToHHMM, formatDuration, formatRelative } from "@/lib/utils";
 import {
-  appointments,
-  services,
-  serviceById,
-  staff,
-  staffById,
-  clients,
   CLIENT_TAG,
   kpis,
   revenue,
   sources,
   sourcesMeta,
-  activity,
   upcoming,
-  bookingPage,
   dayStartMin,
   dayEndMin,
   slotMin,
@@ -46,9 +39,11 @@ import {
   STATUS_META,
   type Appointment,
   type ApptStatus,
+  type Service,
+  type DKpi,
 } from "@/lib/demo/data";
 
-function exportRevenueCSV(lang: "tr" | "en") {
+function exportRevenueCSV(lang: "tr" | "en", services: Service[]) {
   const header = lang === "tr"
     ? ["Gün", "Gelir (₺)", "Değişim (%)"]
     : ["Day", "Revenue (₺)", "Change (%)"];
@@ -78,19 +73,47 @@ const DAY_LABELS: { tr: string; en: string }[] = [
 
 export default function DashboardPage() {
   const { t, lang } = useLang();
-  const { atLeast } = usePlan();
+  const { atLeast, isDemo, appointments, services, staff, clients, activity, serviceById, staffById } = useWorkspace();
+  const newAppt = useNewAppointment();
   const canRevenue = atLeast("isletme");
   const [dayOffset, setDayOffset] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>("ap3");
+  const [selectedId, setSelectedId] = useState<string | null>(isDemo ? "ap3" : null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const { bookingInfo } = useWorkspace();
 
   const dayAppts = useMemo(
     () => appointments.filter((a) => a.dayOffset === dayOffset).sort((a, b) => a.startMin - b.startMin),
-    [dayOffset],
+    [dayOffset, appointments],
   );
   const selected = appointments.find((a) => a.id === selectedId) ?? null;
   const drawerOpen = selected !== null;
 
   const dayLabel = DAY_LABELS[dayOffset + 1] ?? { tr: "Gün", en: "Day" };
+
+  function copyBookingLink() {
+    navigator.clipboard.writeText(`https://${bookingInfo.url}`).catch(() => {});
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 1800);
+  }
+
+  // Fresh workspaces: KPIs are computed from the owner's own data, not demo numbers.
+  const todays = appointments.filter((a) => a.dayOffset === 0);
+  const kpiList: DKpi[] = isDemo
+    ? kpis
+    : [
+        { key: "bookings", label: { tr: "Bugünkü randevu", en: "Bookings today" }, value: String(todays.length), icon: "calendar-check", hint: { tr: "takviminden", en: "from your calendar" } },
+        { key: "revenue", label: { tr: "Günlük gelir", en: "Revenue" }, value: formatMoney(todays.reduce((s, a) => s + a.price, 0)), icon: "dollar-sign", hint: { tr: "bugünkü randevular", en: "today's bookings" } },
+        { key: "staff", label: { tr: "Personel", en: "Staff" }, value: String(staff.length), icon: "gauge", hint: { tr: "takvim sütunları", en: "calendar columns" } },
+        { key: "clients", label: { tr: "Müşteri", en: "Clients" }, value: String(clients.length), icon: "user-plus", hint: { tr: "toplam kayıt", en: "total records" } },
+      ];
+
+  const setupSteps = [
+    { done: services.length > 0, label: { tr: "İlk hizmetini ekle", en: "Add your first service" }, href: "/services" },
+    { done: staff.length > 0, label: { tr: "Personel ekle", en: "Add staff" }, href: "/staff" },
+    { done: appointments.length > 0, label: { tr: "İlk randevunu oluştur", en: "Create your first booking" }, action: () => newAppt.open() },
+    { done: false, label: { tr: "Rezervasyon linkini paylaş", en: "Share your booking link" }, href: "/booking" },
+  ];
+  const showSetup = !isDemo && setupSteps.some((s) => !s.done && !s.href?.startsWith("/booking"));
 
   return (
     <div className="mx-auto max-w-[1500px] animate-fade-in">
@@ -110,20 +133,63 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <button className="hidden h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-[13px] font-medium text-foreground shadow-pill transition-colors hover:bg-muted sm:inline-flex">
-                <Share2 className="h-4 w-4 text-muted-foreground" />
-                {lang === "tr" ? "Rezervasyon linki" : "Booking link"}
+              <button
+                onClick={copyBookingLink}
+                className="hidden h-9 items-center gap-2 rounded-lg border border-border bg-card px-3.5 text-[13px] font-medium text-foreground shadow-pill transition-colors hover:bg-muted sm:inline-flex"
+              >
+                {linkCopied ? <Check className="h-4 w-4 text-success" /> : <Share2 className="h-4 w-4 text-muted-foreground" />}
+                {linkCopied ? (lang === "tr" ? "Kopyalandı!" : "Copied!") : (lang === "tr" ? "Rezervasyon linki" : "Booking link")}
               </button>
-              <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 sm:px-3.5">
+              <button
+                onClick={() => newAppt.open()}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 sm:px-3.5"
+              >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">{lang === "tr" ? "Randevu ekle" : "New booking"}</span>
               </button>
             </div>
           </div>
 
+          {/* Getting started — fresh workspaces walk through their first setup */}
+          {showSetup && (
+            <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-5 shadow-soft">
+              <h2 className="font-display text-[15px] font-semibold tracking-tight">
+                {lang === "tr" ? "Hadi başlayalım 👋" : "Let's get you set up 👋"}
+              </h2>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                {lang === "tr"
+                  ? "Panelin sıfırdan başlıyor — kendi verilerini gir, rezervasyon almaya başla."
+                  : "Your panel starts from zero — enter your own data and start taking bookings."}
+              </p>
+              <div className="mt-3.5 grid gap-2 sm:grid-cols-2">
+                {setupSteps.map((s, i) => {
+                  const inner = (
+                    <>
+                      <span className={cn(
+                        "grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold",
+                        s.done ? "bg-success text-white" : "bg-primary/10 text-primary",
+                      )}>
+                        {s.done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                      </span>
+                      <span className={cn("text-[13px] font-medium", s.done && "text-muted-foreground line-through")}>
+                        {t(s.label)}
+                      </span>
+                    </>
+                  );
+                  const cls = "flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted";
+                  return s.href ? (
+                    <Link key={i} href={s.href} className={cls}>{inner}</Link>
+                  ) : (
+                    <button key={i} onClick={s.action} className={cls}>{inner}</button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Stat row */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {kpis.map((k) => {
+            {kpiList.map((k) => {
               const up = (k.delta ?? 0) >= 0;
               return (
                 <div key={k.key} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -257,7 +323,20 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Revenue + sources */}
+          {/* Revenue + sources — demo data; fresh workspaces see reports fill up over time */}
+          {!isDemo && (
+            <div className="rounded-2xl border border-border bg-card p-5 text-center shadow-soft">
+              <p className="font-display text-[15px] font-semibold tracking-tight">
+                {lang === "tr" ? "Raporlar" : "Reports"}
+              </p>
+              <p className="mx-auto mt-1 max-w-md text-[12.5px] text-muted-foreground">
+                {lang === "tr"
+                  ? "Gelir grafiği ve rezervasyon kaynakları ilk randevularınla birlikte burada dolmaya başlar."
+                  : "Your revenue chart and booking sources start filling in here with your first appointments."}
+              </p>
+            </div>
+          )}
+          {isDemo && (
           <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
             <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
               <div className="flex items-start justify-between">
@@ -267,7 +346,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => canRevenue ? exportRevenueCSV(lang) : undefined}
+                    onClick={() => canRevenue ? exportRevenueCSV(lang, services) : undefined}
                     title={canRevenue ? (lang === "tr" ? "Excel/CSV indir" : "Download Excel/CSV") : (lang === "tr" ? "İşletme paketi gerekli" : "Business plan required")}
                     className={cn(
                       "inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-medium shadow-pill transition-colors",
@@ -387,6 +466,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Services / staff panel */}
           <div className="grid gap-6 lg:grid-cols-2">
@@ -394,12 +474,17 @@ export default function DashboardPage() {
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
               <div className="flex items-center justify-between border-b border-border p-4">
                 <h3 className="font-display text-[15px] font-semibold tracking-tight">{lang === "tr" ? "Hizmetler" : "Services"}</h3>
-                <button className="inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:underline">
+                <Link href="/services" className="inline-flex items-center gap-1 text-[12px] font-medium text-primary hover:underline">
                   <Plus className="h-3.5 w-3.5" />
                   {lang === "tr" ? "Ekle" : "Add"}
-                </button>
+                </Link>
               </div>
               <div className="divide-y divide-border/60">
+                {services.length === 0 && (
+                  <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground">
+                    {lang === "tr" ? "Henüz hizmet yok — “Ekle” ile başla." : "No services yet — start with “Add”."}
+                  </p>
+                )}
                 {services.slice(0, 5).map((s) => (
                   <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
                     <span className="h-7 w-1.5 rounded-full" style={{ background: SERVICE_VAR[s.color] }} />
@@ -423,6 +508,11 @@ export default function DashboardPage() {
                 <span className="text-[12px] text-muted-foreground">{lang === "tr" ? "bugünkü doluluk" : "today's load"}</span>
               </div>
               <div className="divide-y divide-border/60">
+                {staff.length === 0 && (
+                  <p className="px-4 py-6 text-center text-[12.5px] text-muted-foreground">
+                    {lang === "tr" ? "Henüz personel yok — Personel sayfasından ekle." : "No staff yet — add from the Staff page."}
+                  </p>
+                )}
                 {staff.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
                     <span className="relative">
@@ -467,6 +557,13 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {clients.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-[12.5px] text-muted-foreground">
+                        {lang === "tr" ? "Henüz müşteri yok — ilk randevuyla otomatik oluşur." : "No clients yet — created automatically with the first booking."}
+                      </td>
+                    </tr>
+                  )}
                   {clients.slice(0, 6).map((c) => {
                     const tag = CLIENT_TAG[c.tag];
                     return (
@@ -508,7 +605,8 @@ export default function DashboardPage() {
           <aside className="fixed bottom-0 left-0 right-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-2xl drawer-anim xl:relative xl:bottom-auto xl:left-auto xl:right-auto xl:z-auto xl:max-h-none xl:rounded-none xl:sticky xl:top-2 xl:self-start">
             <AppointmentDrawer appt={selected} onClose={() => setSelectedId(null)} lang={lang} t={t} />
 
-            {/* Upcoming / no-show panel */}
+            {/* Upcoming / no-show panel — demo showcase */}
+            {isDemo && (
             <div className="mt-5 space-y-3">
               <UpcomingCard
                 icon={<CalendarCheck className="h-4 w-4" />}
@@ -532,6 +630,7 @@ export default function DashboardPage() {
                 sub={t(upcoming.waitlist.sub)}
               />
             </div>
+            )}
 
             {/* Booking-page preview */}
             <BookingPreview lang={lang} t={t} />
@@ -542,7 +641,12 @@ export default function DashboardPage() {
                 {lang === "tr" ? "Son hareketler" : "Recent activity"}
               </h3>
               <div className="mt-3.5 space-y-3.5">
-                {activity.map((a) => (
+                {activity.length === 0 && (
+                  <p className="text-[12.5px] text-muted-foreground">
+                    {lang === "tr" ? "Henüz hareket yok." : "No activity yet."}
+                  </p>
+                )}
+                {activity.slice(0, 6).map((a) => (
                   <div key={a.id} className="flex items-start gap-2.5">
                     <span
                       className={cn(
@@ -640,6 +744,7 @@ function DaySchedule({
   lang: "tr" | "en";
   t: (v: { tr: string; en: string }) => string;
 }) {
+  const { staff, serviceById } = useWorkspace();
   const rowH = 38; // px per slot
   const totalSlots = (dayEndMin - dayStartMin) / slotMin;
   const gridH = totalSlots * rowH;
@@ -675,6 +780,14 @@ function DaySchedule({
         </div>
       </div>
 
+      {staff.length === 0 && (
+        <p className="px-4 py-10 text-center text-[13px] text-muted-foreground">
+          {lang === "tr"
+            ? "Program boş — personel ekleyince her biri burada bir sütun olur."
+            : "The schedule is empty — each staff member you add becomes a column here."}
+        </p>
+      )}
+      {staff.length > 0 && (
       <div className="overflow-x-auto">
         <div className="min-w-[640px]">
           {/* staff header — columns settle in one by one on first mount */}
@@ -780,6 +893,7 @@ function DaySchedule({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -796,6 +910,8 @@ function AppointmentDrawer({
   lang: "tr" | "en";
   t: (v: { tr: string; en: string }) => string;
 }) {
+  const { serviceById, staffById, setApptStatus } = useWorkspace();
+  const newAppt = useNewAppointment();
   const svc = serviceById(appt.serviceId);
   const stf = staffById(appt.staffId);
   const st = STATUS_META[appt.status];
@@ -884,12 +1000,18 @@ function AppointmentDrawer({
       </div>
 
       {appt.status === "booked" || appt.status === "checked-in" ? (
-        <button className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+        <button
+          onClick={() => setApptStatus(appt.id, appt.status === "booked" ? "checked-in" : "done")}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        >
           <Check className="h-4 w-4" />
           {appt.status === "booked" ? (lang === "tr" ? "Geldi olarak işaretle" : "Check in") : (lang === "tr" ? "Tamamlandı işaretle" : "Mark done")}
         </button>
       ) : (
-        <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted">
+        <button
+          onClick={() => newAppt.open({ client: appt.client, phone: appt.clientPhone })}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
+        >
           {lang === "tr" ? "Yeniden rezerve et" : "Rebook"}
         </button>
       )}
@@ -908,7 +1030,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 /* ── Public booking-page preview (a mini widget) ───────────────────────────── */
 function BookingPreview({ lang, t }: { lang: "tr" | "en"; t: (v: { tr: string; en: string }) => string }) {
-  const opts = bookingPage.options.map(serviceById);
+  const { bookingInfo, serviceById } = useWorkspace();
+  const opts = bookingInfo.options.map(serviceById);
   return (
     <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="flex items-center justify-between border-b border-border p-4">
@@ -921,16 +1044,21 @@ function BookingPreview({ lang, t }: { lang: "tr" | "en"; t: (v: { tr: string; e
       <div className="p-4">
         {/* business header mock */}
         <div className="rounded-xl p-3.5 text-white" style={{ backgroundImage: "var(--grad-brand)" }}>
-          <p className="font-display text-base font-bold leading-tight">{bookingPage.business}</p>
-          <p className="text-[11px] text-white/80">{t(bookingPage.tagline)}</p>
+          <p className="font-display text-base font-bold leading-tight">{bookingInfo.business}</p>
+          <p className="text-[11px] text-white/80">{t(bookingInfo.tagline)}</p>
           <p className="mt-1.5 flex items-center gap-1 text-[11px] text-white/90">
             <Star className="h-3 w-3 fill-white text-white" />
-            {bookingPage.rating} · {bookingPage.reviews} {lang === "tr" ? "yorum" : "reviews"}
+            {bookingInfo.rating} · {bookingInfo.reviews} {lang === "tr" ? "yorum" : "reviews"}
           </p>
         </div>
         {/* service options */}
         <p className="mt-3 label-mono text-muted-foreground">{lang === "tr" ? "Hizmet seç" : "Pick a service"}</p>
         <div className="mt-1.5 space-y-1.5">
+          {opts.length === 0 && (
+            <p className="rounded-lg border border-dashed border-border px-3 py-3 text-center text-[11.5px] text-muted-foreground">
+              {lang === "tr" ? "Hizmet ekleyince burada listelenir." : "Your services will be listed here."}
+            </p>
+          )}
           {opts.slice(0, 3).map((s, i) => (
             <div key={s.id} className={cn("flex items-center gap-2.5 rounded-lg border px-2.5 py-2", i === 0 ? "border-primary/40 bg-primary/[0.05]" : "border-border")}>
               <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: SERVICE_VAR[s.color] }} />
@@ -943,15 +1071,18 @@ function BookingPreview({ lang, t }: { lang: "tr" | "en"; t: (v: { tr: string; e
         {/* slots */}
         <p className="mt-3 label-mono text-muted-foreground">{lang === "tr" ? "Uygun saatler" : "Open times"}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {bookingPage.slots.map((m, i) => (
+          {bookingInfo.slots.map((m, i) => (
             <span key={m} className={cn("tnum rounded-md border px-2 py-1 text-[12px]", i === 1 ? "border-primary bg-primary text-primary-foreground" : "border-border text-foreground")}>
               {minutesToHHMM(m)}
             </span>
           ))}
         </div>
-        <button className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground">
-          {lang === "tr" ? "Rezerve et" : "Book now"}
-        </button>
+        <Link
+          href="/booking"
+          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          {lang === "tr" ? "Sayfayı yönet" : "Manage page"}
+        </Link>
       </div>
     </div>
   );

@@ -12,16 +12,17 @@ import {
   CreditCard,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, formatPrice, formatDuration, minutesToHHMM } from "@/lib/utils";
-import { bookingPage, serviceById, SERVICE_VAR, demoServices } from "@/lib/demo/data";
-
-const DEMO_URL = "booky.app/book/studio-lumiere";
+import { SERVICE_VAR } from "@/lib/demo/data";
+import { useWorkspace, initialsOf } from "@/components/app/workspace-context";
 
 /** Mini booking widget embedded in the preview panel. */
 function BookingWidget() {
   const { t, lang } = useLang();
-  const [serviceId, setServiceId] = useState(demoServices[0]);
+  const { bookingInfo, serviceById } = useWorkspace();
+  const [serviceId, setServiceId] = useState(bookingInfo.options[0] ?? "");
   const [slot, setSlot] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
@@ -37,16 +38,16 @@ function BookingWidget() {
       <div className="border-b border-border bg-muted/30 px-5 py-4">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl text-sm font-bold text-white" style={{ backgroundImage: "var(--grad-brand)" }}>
-            SL
+            {initialsOf(bookingInfo.business)}
           </span>
           <div>
-            <p className="font-semibold leading-tight">{bookingPage.business}</p>
-            <p className="text-[12px] text-muted-foreground">{t(bookingPage.tagline)}</p>
+            <p className="font-semibold leading-tight">{bookingInfo.business}</p>
+            <p className="text-[12px] text-muted-foreground">{t(bookingInfo.tagline)}</p>
           </div>
           <div className="ml-auto flex items-center gap-1 text-[12px] text-muted-foreground">
             <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-            <span className="font-semibold text-foreground">{bookingPage.rating}</span>
-            <span>({bookingPage.reviews})</span>
+            <span className="font-semibold text-foreground">{bookingInfo.rating}</span>
+            <span>({bookingInfo.reviews})</span>
           </div>
         </div>
       </div>
@@ -70,7 +71,15 @@ function BookingWidget() {
             <div>
               <p className="label-mono text-muted-foreground">{lang === "tr" ? "1 · Hizmet seç" : "1 · Choose a service"}</p>
               <div className="mt-2 space-y-2">
-                {bookingPage.options.map((id) => {
+                {bookingInfo.options.length === 0 && (
+                  <Link
+                    href="/services"
+                    className="block rounded-lg border border-dashed border-border px-3 py-4 text-center text-[12.5px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {lang === "tr" ? "Henüz hizmet yok — eklemek için tıkla." : "No services yet — click to add."}
+                  </Link>
+                )}
+                {bookingInfo.options.map((id) => {
                   const sv = serviceById(id);
                   const sel = id === serviceId;
                   return (
@@ -104,7 +113,7 @@ function BookingWidget() {
             <div>
               <p className="label-mono text-muted-foreground">{lang === "tr" ? "2 · Saat seç" : "2 · Pick a time"}</p>
               <div className="mt-2 grid grid-cols-3 gap-1.5">
-                {bookingPage.slots.map((min) => {
+                {bookingInfo.slots.map((min) => {
                   const sel = slot === min;
                   return (
                     <button
@@ -125,7 +134,7 @@ function BookingWidget() {
             </div>
 
             {/* Deposit note */}
-            {serviceById(serviceId).deposit > 0 && (
+            {serviceId !== "" && serviceById(serviceId).deposit > 0 && (
               <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
                 <CreditCard className="h-3.5 w-3.5 shrink-0 text-primary" />
                 {lang === "tr"
@@ -137,7 +146,7 @@ function BookingWidget() {
             {/* Confirm */}
             <button
               onClick={confirm}
-              disabled={slot === null}
+              disabled={slot === null || serviceId === ""}
               className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
             >
               <CalendarPlus className="h-4 w-4" />
@@ -172,6 +181,19 @@ function CopyButton({ text }: { text: string }) {
 
 export default function BookingPage() {
   const { t, lang } = useLang();
+  const { bookingInfo, serviceById } = useWorkspace();
+  const [shared, setShared] = useState(false);
+
+  function share() {
+    const url = `https://${bookingInfo.url}`;
+    if (navigator.share) {
+      navigator.share({ title: bookingInfo.business, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).catch(() => {});
+      setShared(true);
+      setTimeout(() => setShared(false), 1800);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[1100px] animate-fade-in space-y-8">
@@ -201,12 +223,15 @@ export default function BookingPage() {
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
             <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="tnum truncate text-[13px] font-medium">{DEMO_URL}</span>
+            <span className="tnum truncate text-[13px] font-medium">{bookingInfo.url}</span>
           </div>
-          <CopyButton text={DEMO_URL} />
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">
-            <Share2 className="h-4 w-4" />
-            {lang === "tr" ? "Paylaş" : "Share"}
+          <CopyButton text={bookingInfo.url} />
+          <button
+            onClick={share}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+          >
+            {shared ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+            {shared ? (lang === "tr" ? "Kopyalandı!" : "Copied!") : (lang === "tr" ? "Paylaş" : "Share")}
           </button>
         </div>
       </div>
@@ -225,7 +250,7 @@ export default function BookingPage() {
               <div className="space-y-1.5">
                 <label className="label-mono text-muted-foreground">{lang === "tr" ? "İşletme adı" : "Business name"}</label>
                 <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 font-medium">
-                  {bookingPage.business}
+                  {bookingInfo.business}
                 </div>
               </div>
 
@@ -233,7 +258,7 @@ export default function BookingPage() {
               <div className="space-y-1.5">
                 <label className="label-mono text-muted-foreground">{lang === "tr" ? "Slogan" : "Tagline"}</label>
                 <div className="flex h-9 items-center rounded-lg border border-border bg-muted/30 px-3 text-muted-foreground">
-                  {t(bookingPage.tagline)}
+                  {t(bookingInfo.tagline)}
                 </div>
               </div>
 
@@ -241,7 +266,15 @@ export default function BookingPage() {
               <div className="space-y-1.5">
                 <label className="label-mono text-muted-foreground">{lang === "tr" ? "Sunulan hizmetler" : "Offered services"}</label>
                 <div className="space-y-1.5">
-                  {bookingPage.options.map((id) => {
+                  {bookingInfo.options.length === 0 && (
+                    <Link
+                      href="/services"
+                      className="block rounded-lg border border-dashed border-border px-3 py-3 text-center text-[12px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    >
+                      {lang === "tr" ? "Hizmet ekleyince burada görünür — eklemek için tıkla." : "Services show up here — click to add one."}
+                    </Link>
+                  )}
+                  {bookingInfo.options.map((id) => {
                     const sv = serviceById(id);
                     return (
                       <div key={id} className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2">
@@ -260,18 +293,18 @@ export default function BookingPage() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-soft text-center">
-              <p className="tnum text-2xl font-bold leading-none">{bookingPage.rating}</p>
+              <p className="tnum text-2xl font-bold leading-none">{bookingInfo.rating}</p>
               <div className="mt-1 flex justify-center">
                 <Star className="h-3.5 w-3.5 fill-warning text-warning" />
               </div>
               <p className="mt-1 text-[10px] text-muted-foreground">{lang === "tr" ? "Puan" : "Rating"}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-soft text-center">
-              <p className="tnum text-2xl font-bold leading-none">{bookingPage.reviews}</p>
+              <p className="tnum text-2xl font-bold leading-none">{bookingInfo.reviews}</p>
               <p className="mt-2 text-[10px] text-muted-foreground">{lang === "tr" ? "Değerlendirme" : "Reviews"}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-soft text-center">
-              <p className="tnum text-2xl font-bold leading-none">{bookingPage.options.length}</p>
+              <p className="tnum text-2xl font-bold leading-none">{bookingInfo.options.length}</p>
               <p className="mt-2 text-[10px] text-muted-foreground">{lang === "tr" ? "Aktif hizmet" : "Active services"}</p>
             </div>
           </div>

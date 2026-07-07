@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
 import { AiSearch } from "@/components/app/ai-search";
-import { PlanProvider } from "@/components/app/plan-context";
+import { WorkspaceProvider } from "@/components/app/workspace-context";
+import { NewAppointmentProvider } from "@/components/app/forms";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,7 +23,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <PlanProvider>
+    <WorkspaceProvider>
+    <NewAppointmentProvider>
     <div className="flex h-dvh overflow-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -41,6 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <AiSearch open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
-    </PlanProvider>
+    </NewAppointmentProvider>
+    </WorkspaceProvider>
   );
 }

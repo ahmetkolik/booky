@@ -1,22 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Clock, BarChart2, CheckCircle2, Circle } from "lucide-react";
+import Link from "next/link";
+import { Plus, X, Clock, BarChart2, CheckCircle2, Circle, Users } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, formatDuration, minutesToHHMM } from "@/lib/utils";
-import { staff, services, appointments, SERVICE_VAR, type Staff } from "@/lib/demo/data";
-
-const SERVICE_COLORS: Record<string, string> = {};
-for (const s of services) SERVICE_COLORS[s.id] = SERVICE_VAR[s.color];
-
-/** Services each staff member handles — derived from appointment history in demo. */
-function staffServices(staffId: string) {
-  const seen = new Set<string>();
-  for (const a of appointments) {
-    if (a.staffId === staffId) seen.add(a.serviceId);
-  }
-  return services.filter((s) => seen.has(s.id));
-}
+import { SERVICE_VAR } from "@/lib/demo/data";
+import { useWorkspace } from "@/components/app/workspace-context";
+import { StaffFormModal } from "@/components/app/forms";
 
 function UtilBar({ value }: { value: number }) {
   return (
@@ -35,10 +26,22 @@ function HourLabel({ min }: { min: number }) {
 
 export default function StaffPage() {
   const { t, lang } = useLang();
-  const [selected, setSelected] = useState<Staff | null>(staff[0]);
+  const { staff, services, appointments } = useWorkspace();
+  const [selectedId, setSelectedId] = useState<string | null>(staff[0]?.id ?? null);
+  const [adding, setAdding] = useState(false);
 
+  const selected = staff.find((s) => s.id === selectedId) ?? null;
   const onlineCount = staff.filter((s) => s.online).length;
-  const avgUtil = Math.round(staff.reduce((sum, s) => sum + s.utilization, 0) / staff.length);
+  const avgUtil = staff.length ? Math.round(staff.reduce((sum, s) => sum + s.utilization, 0) / staff.length) : 0;
+
+  /** Services each staff member handles — derived from appointment history. */
+  function staffServices(staffId: string) {
+    const seen = new Set<string>();
+    for (const a of appointments) {
+      if (a.staffId === staffId) seen.add(a.serviceId);
+    }
+    return services.filter((s) => seen.has(s.id));
+  }
 
   return (
     <div className="mx-auto max-w-[1400px] animate-fade-in">
@@ -55,11 +58,38 @@ export default function StaffPage() {
                 {staff.length} {lang === "tr" ? "personel" : "members"} · {onlineCount} {lang === "tr" ? "çevrimiçi" : "online"} · {lang === "tr" ? "ort. doluluk" : "avg utilization"} {avgUtil}%
               </p>
             </div>
-            <button className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">
+            <button
+              onClick={() => setAdding(true)}
+              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+            >
               <Plus className="h-4 w-4" />
               {lang === "tr" ? "Personel ekle" : "Add member"}
             </button>
           </div>
+
+          {/* Empty state — fresh workspaces start with zero staff */}
+          {staff.length === 0 && (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card p-10 text-center shadow-soft">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Users className="h-6 w-6" />
+              </span>
+              <p className="font-display text-lg font-semibold">
+                {lang === "tr" ? "Henüz personel yok" : "No staff yet"}
+              </p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {lang === "tr"
+                  ? "Kendini veya ekibini ekle — takvimde her personel bir sütun olur."
+                  : "Add yourself or your team — each member becomes a calendar column."}
+              </p>
+              <button
+                onClick={() => setAdding(true)}
+                className="mt-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                {lang === "tr" ? "İlk personelini ekle" : "Add your first member"}
+              </button>
+            </div>
+          )}
 
           {/* Cards grid */}
           <div className="grid gap-4 sm:grid-cols-2">
@@ -69,7 +99,7 @@ export default function StaffPage() {
               return (
                 <button
                   key={s.id}
-                  onClick={() => setSelected(s)}
+                  onClick={() => setSelectedId(s.id)}
                   className={cn(
                     "group rounded-2xl border bg-card p-5 text-left shadow-soft transition-all hover:shadow-pop",
                     isSel ? "border-primary/40 ring-1 ring-primary/20" : "border-border",
@@ -142,7 +172,7 @@ export default function StaffPage() {
                   {lang === "tr" ? "Personel kartı" : "Member card"}
                 </h2>
                 <button
-                  onClick={() => setSelected(null)}
+                  onClick={() => setSelectedId(null)}
                   aria-label="close"
                   className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:hidden"
                 >
@@ -234,14 +264,19 @@ export default function StaffPage() {
                 </span>
               </div>
 
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+              <Link
+                href="/calendar"
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
                 <BarChart2 className="h-4 w-4" />
                 {lang === "tr" ? "Takvimi görüntüle" : "View schedule"}
-              </button>
+              </Link>
             </div>
           </aside>
         )}
       </div>
+
+      {adding && <StaffFormModal onClose={() => setAdding(false)} />}
     </div>
   );
 }

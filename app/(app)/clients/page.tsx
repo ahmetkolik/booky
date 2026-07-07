@@ -1,24 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Plus, X, Phone, Mail, Star, CalendarCheck } from "lucide-react";
+import { Search, Plus, X, Phone, Mail, Star, CalendarCheck, UserPlus } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, formatPrice, minutesToHHMM, formatDate } from "@/lib/utils";
-import {
-  clients,
-  CLIENT_TAG,
-  appointments,
-  serviceById,
-  SERVICE_VAR,
-  STATUS_META,
-  type Client,
-} from "@/lib/demo/data";
+import { CLIENT_TAG, SERVICE_VAR, STATUS_META, type Client } from "@/lib/demo/data";
+import { useWorkspace } from "@/components/app/workspace-context";
+import { ClientFormModal, useNewAppointment } from "@/components/app/forms";
 
 export default function ClientsPage() {
   const { t, lang } = useLang();
+  const { clients, appointments, serviceById } = useWorkspace();
+  const newAppt = useNewAppointment();
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<Client["tag"] | null>(null);
-  const [selected, setSelected] = useState<Client | null>(clients[0]);
+  const [selectedId, setSelectedId] = useState<string | null>(clients[0]?.id ?? null);
+  const [adding, setAdding] = useState(false);
+
+  const selected = clients.find((c) => c.id === selectedId) ?? null;
 
   const rows = clients.filter((c) => {
     if (tagFilter && c.tag !== tagFilter) return false;
@@ -47,13 +46,41 @@ export default function ClientsPage() {
                 {totalClients} {lang === "tr" ? "müşteri" : "clients"} · {vipCount} VIP
               </p>
             </div>
-            <button className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">
+            <button
+              onClick={() => setAdding(true)}
+              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+            >
               <Plus className="h-4 w-4" />
               {lang === "tr" ? "Müşteri ekle" : "Add client"}
             </button>
           </div>
 
+          {/* Empty state — fresh workspaces start with zero clients */}
+          {clients.length === 0 && (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card p-10 text-center shadow-soft">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <UserPlus className="h-6 w-6" />
+              </span>
+              <p className="font-display text-lg font-semibold">
+                {lang === "tr" ? "Henüz müşteri yok" : "No clients yet"}
+              </p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {lang === "tr"
+                  ? "Müşterini elle ekle veya ilk randevuyu oluştur — listeye otomatik düşer."
+                  : "Add a client manually or create the first booking — they'll appear here automatically."}
+              </p>
+              <button
+                onClick={() => setAdding(true)}
+                className="mt-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                {lang === "tr" ? "İlk müşterini ekle" : "Add your first client"}
+              </button>
+            </div>
+          )}
+
           {/* Controls */}
+          {clients.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm">
               <Search className="h-4 w-4 text-muted-foreground" />
@@ -82,8 +109,10 @@ export default function ClientsPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* Table */}
+          {clients.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -106,7 +135,7 @@ export default function ClientsPage() {
                     return (
                       <tr
                         key={c.id}
-                        onClick={() => setSelected(c)}
+                        onClick={() => setSelectedId(c.id)}
                         className={cn("cursor-pointer border-b border-border/60 transition-colors last:border-0", isSel ? "bg-primary/[0.04]" : "hover:bg-muted/50")}
                       >
                         <td className="py-3 pl-4">
@@ -131,6 +160,7 @@ export default function ClientsPage() {
               </table>
             </div>
           </div>
+          )}
         </div>
 
         {/* Drawer */}
@@ -139,7 +169,7 @@ export default function ClientsPage() {
             <div className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-soft">
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-[15px] font-semibold tracking-tight">{lang === "tr" ? "Müşteri kartı" : "Client card"}</h2>
-                <button onClick={() => setSelected(null)} aria-label="close" className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:hidden">
+                <button onClick={() => setSelectedId(null)} aria-label="close" className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:hidden">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -191,7 +221,10 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+              <button
+                onClick={() => newAppt.open({ client: selected.name, phone: selected.phone })}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
                 <CalendarCheck className="h-4 w-4" />
                 {lang === "tr" ? "Randevu oluştur" : "Book appointment"}
               </button>
@@ -213,6 +246,8 @@ export default function ClientsPage() {
           </aside>
         )}
       </div>
+
+      {adding && <ClientFormModal onClose={() => setAdding(false)} />}
     </div>
   );
 }

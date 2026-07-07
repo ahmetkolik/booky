@@ -11,12 +11,52 @@ import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
+import { createFreshWorkspace, readPendingSignup } from "@/components/app/workspace-context";
 
+/* Every appointment-based business type we know of. Rendered alphabetically
+   in the active language; "other" lives in a free-text input below the grid. */
 const CATEGORIES: { id: string; icon: string; label: { tr: string; en: string } }[] = [
-  { id: "salon", icon: "scissors", label: { tr: "Salon & Berber", en: "Salon & Barber" } },
-  { id: "spa", icon: "flower", label: { tr: "Spa & Masaj", en: "Spa & Massage" } },
-  { id: "fitness", icon: "dumbbell", label: { tr: "Antrenör & Stüdyo", en: "Trainer & Studio" } },
-  { id: "klinik", icon: "stethoscope", label: { tr: "Klinik & Danışman", en: "Clinic & Consultant" } },
+  { id: "akupunktur", icon: "leaf", label: { tr: "Akupunktur", en: "Acupuncture" } },
+  { id: "arac-yikama", icon: "droplets", label: { tr: "Araç yıkama & Detailing", en: "Car wash & Detailing" } },
+  { id: "avukat", icon: "scale", label: { tr: "Avukat & Hukuk bürosu", en: "Lawyer & Law firm" } },
+  { id: "berber", icon: "scissors", label: { tr: "Berber", en: "Barber" } },
+  { id: "cilt-bakimi", icon: "sparkles", label: { tr: "Cilt bakımı & Estetik", en: "Skincare & Aesthetics" } },
+  { id: "cocuk-gelisimi", icon: "baby", label: { tr: "Çocuk gelişimi & Pedagog", en: "Child development & Pedagogy" } },
+  { id: "dans", icon: "footprints", label: { tr: "Dans & Bale stüdyosu", en: "Dance & Ballet studio" } },
+  { id: "dis", icon: "smile", label: { tr: "Diş kliniği", en: "Dental clinic" } },
+  { id: "diyetisyen", icon: "salad", label: { tr: "Diyetisyen & Beslenme", en: "Dietitian & Nutrition" } },
+  { id: "doktor", icon: "stethoscope", label: { tr: "Doktor & Poliklinik", en: "Doctor & Medical clinic" } },
+  { id: "dovme", icon: "pen-tool", label: { tr: "Dövme & Piercing", en: "Tattoo & Piercing" } },
+  { id: "dugun-etkinlik", icon: "calendar-heart", label: { tr: "Düğün & Etkinlik planlama", en: "Wedding & Event planning" } },
+  { id: "emlak", icon: "house", label: { tr: "Emlak danışmanı", en: "Real estate agent" } },
+  { id: "ev-temizligi", icon: "spray-can", label: { tr: "Ev & Ofis temizliği", en: "Home & Office cleaning" } },
+  { id: "pet-kuafor", icon: "paw-print", label: { tr: "Evcil hayvan kuaförü", en: "Pet grooming" } },
+  { id: "finans", icon: "calculator", label: { tr: "Finansal danışman & Muhasebe", en: "Financial advisor & Accounting" } },
+  { id: "fizyoterapi", icon: "activity", label: { tr: "Fizyoterapi & Rehabilitasyon", en: "Physiotherapy & Rehab" } },
+  { id: "fotograf", icon: "camera", label: { tr: "Fotoğraf stüdyosu", en: "Photography studio" } },
+  { id: "kirpik-kas", icon: "eye", label: { tr: "Kirpik & Kaş tasarımı", en: "Lashes & Brows" } },
+  { id: "kiropraktik", icon: "bone", label: { tr: "Kiropraktik & Osteopati", en: "Chiropractic & Osteopathy" } },
+  { id: "antrenor", icon: "dumbbell", label: { tr: "Kişisel antrenör & Fitness", en: "Personal trainer & Fitness" } },
+  { id: "kuafor", icon: "wand-sparkles", label: { tr: "Kuaför & Güzellik salonu", en: "Hair & Beauty salon" } },
+  { id: "lazer-epilasyon", icon: "zap", label: { tr: "Lazer & Epilasyon", en: "Laser & Hair removal" } },
+  { id: "makyaj", icon: "palette", label: { tr: "Makyaj sanatçısı", en: "Makeup artist" } },
+  { id: "manikur", icon: "hand", label: { tr: "Manikür & Pedikür", en: "Nail studio" } },
+  { id: "masaj", icon: "flower", label: { tr: "Masaj terapisti", en: "Massage therapist" } },
+  { id: "muzik-dersi", icon: "music", label: { tr: "Müzik dersi", en: "Music lessons" } },
+  { id: "optik", icon: "glasses", label: { tr: "Optik & Göz sağlığı", en: "Optometry & Eyewear" } },
+  { id: "oto-servis", icon: "wrench", label: { tr: "Oto servis & Bakım", en: "Auto service & Repair" } },
+  { id: "ozel-ders", icon: "graduation-cap", label: { tr: "Özel ders & Eğitmen", en: "Tutoring & Instructors" } },
+  { id: "pilates-yoga", icon: "person-standing", label: { tr: "Pilates & Yoga stüdyosu", en: "Pilates & Yoga studio" } },
+  { id: "psikolog", icon: "brain", label: { tr: "Psikolog & Terapist", en: "Psychologist & Therapist" } },
+  { id: "solaryum", icon: "sun", label: { tr: "Solaryum & Bronzlaşma", en: "Tanning studio" } },
+  { id: "spa", icon: "flower-2", label: { tr: "Spa & Hamam", en: "Spa & Bath" } },
+  { id: "spor-tesisi", icon: "trophy", label: { tr: "Spor tesisi & Saha kiralama", en: "Sports facility & Court rental" } },
+  { id: "surucu-kursu", icon: "car-front", label: { tr: "Sürücü kursu", en: "Driving school" } },
+  { id: "terzi", icon: "shirt", label: { tr: "Terzi & Prova", en: "Tailor & Fittings" } },
+  { id: "tesisat-tamir", icon: "hammer", label: { tr: "Tesisat & Tamir hizmetleri", en: "Plumbing & Repair services" } },
+  { id: "veteriner", icon: "dog", label: { tr: "Veteriner kliniği", en: "Veterinary clinic" } },
+  { id: "yasam-kocu", icon: "compass", label: { tr: "Yaşam koçu & Mentorluk", en: "Life coach & Mentoring" } },
+  { id: "yuzme", icon: "waves", label: { tr: "Yüzme dersi", en: "Swimming lessons" } },
 ];
 
 function toSlug(val: string): string {
@@ -38,6 +78,15 @@ export default function OnboardingPage() {
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
+  /** Free-text business type — used when none of the cards fit. */
+  const [customType, setCustomType] = useState("");
+
+  const sortedCategories = [...CATEGORIES].sort((a, b) =>
+    a.label[lang].localeCompare(b.label[lang], lang),
+  );
+  const categoryLabel = customType.trim()
+    ? customType.trim()
+    : CATEGORIES.find((c) => c.id === category)?.label[lang] ?? null;
 
   function handleNameChange(val: string) {
     setBusinessName(val);
@@ -51,7 +100,17 @@ export default function OnboardingPage() {
 
   function finish() {
     setLoading(true);
-    // With Supabase this creates the business record + sets the slug
+    // Creates an EMPTY workspace (the owner enters their own services, staff
+    // and bookings). Plan comes from signup?plan=…; Supabase will persist this.
+    const pending = readPendingSignup();
+    createFreshWorkspace({
+      name: businessName.trim(),
+      slug: slug.trim(),
+      category: categoryLabel ?? "",
+      email: pending?.email,
+      owner: pending?.name || businessName.trim(),
+      plan: pending?.plan,
+    });
     setTimeout(() => router.push("/dashboard"), 600);
   }
 
@@ -157,24 +216,47 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setCategory(c.id)}
-                  className={cn(
-                    "flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all",
-                    category === c.id
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                      : "border-border bg-card hover:bg-muted",
-                  )}
-                >
-                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-muted text-foreground">
-                    <Icon name={c.icon} className="h-5 w-5" />
-                  </span>
-                  <span className="text-sm font-semibold">{lang === "tr" ? c.label.tr : c.label.en}</span>
-                </button>
-              ))}
+            <div className="max-h-[46dvh] overflow-y-auto rounded-xl border border-border bg-card p-2">
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {sortedCategories.map((c) => {
+                  const active = category === c.id && !customType.trim();
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => { setCategory(c.id); setCustomType(""); }}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-all",
+                        active
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border bg-card hover:bg-muted",
+                      )}
+                    >
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-foreground">
+                        <Icon name={c.icon} className="h-4 w-4" />
+                      </span>
+                      <span className="text-[12.5px] font-semibold leading-tight">{c.label[lang]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Manual entry — for types not on the list */}
+            <div className="space-y-1.5">
+              <Label htmlFor="custom-type">
+                {lang === "tr" ? "Listede yok mu? Kendin yaz" : "Not on the list? Type your own"}
+              </Label>
+              <Input
+                id="custom-type"
+                placeholder={lang === "tr" ? "örn. Seramik atölyesi, astroloji danışmanlığı…" : "e.g. Pottery workshop, astrology consulting…"}
+                value={customType}
+                onChange={(e) => { setCustomType(e.target.value); if (e.target.value.trim()) setCategory(null); }}
+              />
+              {customType.trim() && (
+                <p className="text-[11.5px] text-muted-foreground">
+                  {lang === "tr" ? `Tür olarak "${customType.trim()}" kullanılacak.` : `We'll use "${customType.trim()}" as your type.`}
+                </p>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -183,7 +265,7 @@ export default function OnboardingPage() {
               </Button>
               <Button
                 className="flex-1 gap-2"
-                disabled={!category}
+                disabled={!category && !customType.trim()}
                 onClick={() => setStep(3)}
               >
                 {lang === "tr" ? "Devam et" : "Continue"} <ArrowRight className="h-4 w-4" />
@@ -216,7 +298,7 @@ export default function OnboardingPage() {
               />
               <SummaryRow
                 label={lang === "tr" ? "Tür" : "Category"}
-                value={CATEGORIES.find((c) => c.id === category)?.[lang === "tr" ? "label" : "label"]?.[lang] ?? "—"}
+                value={categoryLabel ?? "—"}
               />
             </div>
 

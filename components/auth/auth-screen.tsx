@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { PLAN_BY_ID, type Plan } from "@/lib/stripe/plans";
+import { startDemoSession, storePendingSignup, hasWorkspace } from "@/components/app/workspace-context";
 
 /**
  * Login / signup with a DEMO BYPASS. Supabase isn't connected in this kit, so
- * submitting (or "Continue with demo") just drops you into the live demo
- * dashboard. Wire Supabase via /setup to make these forms do real auth.
+ * submitting (or "Continue with demo") just drops you into the dashboard.
+ * Signup carries name/email/plan into onboarding, which creates an EMPTY
+ * workspace the owner fills in. Wire Supabase via /setup for real auth.
  */
 export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"; planId?: Plan["id"] }) {
   const { ui, t, lang } = useLang();
@@ -26,8 +28,26 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
   function enter(e?: React.FormEvent) {
     e?.preventDefault();
     setLoading(true);
-    const dest = mode === "signup" ? "/onboarding" : "/dashboard";
-    setTimeout(() => router.push(dest), 450);
+    if (mode === "signup") {
+      // Carry the form + chosen plan into onboarding (creates the workspace).
+      const form = e?.currentTarget instanceof HTMLFormElement ? new FormData(e.currentTarget) : null;
+      storePendingSignup({
+        name: (form?.get("name") as string)?.trim() || "",
+        email: (form?.get("email") as string)?.trim() || "",
+        plan: planId,
+      });
+      setTimeout(() => router.push("/onboarding"), 450);
+      return;
+    }
+    // Login: keep an existing workspace; otherwise fall back to the demo.
+    if (!hasWorkspace()) startDemoSession();
+    setTimeout(() => router.push("/dashboard"), 450);
+  }
+
+  function enterDemo() {
+    setLoading(true);
+    startDemoSession();
+    setTimeout(() => router.push("/dashboard"), 450);
   }
 
   const isLogin = mode === "login";
@@ -138,7 +158,7 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
           </form>
 
           <button
-            onClick={enter}
+            onClick={enterDemo}
             className="w-full rounded-lg border border-dashed border-border py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary cursor-pointer"
           >
             {ui.continueDemo} →

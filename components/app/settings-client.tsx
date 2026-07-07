@@ -1,24 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, CircleDashed, MapPin, ExternalLink, MessageSquare } from "lucide-react";
+import { CheckCircle2, CircleDashed, MapPin, ExternalLink, MessageSquare, Check } from "lucide-react";
 import appConfig from "@/app.config";
-import { bookingPage } from "@/lib/demo/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
 import { useLang } from "@/components/i18n/language-provider";
+import { useWorkspace } from "@/components/app/workspace-context";
 
 export function SettingsClient({ connected }: { connected: Record<string, boolean> }) {
   const { t, ui, lang } = useLang();
+  const { location, setLocation, business } = useWorkspace();
 
   // Business location — feeds the booking page and the "directions" link in
-  // reminder SMS. Demo mode keeps it in state; Supabase persists it once wired.
-  const [address, setAddress] = useState(bookingPage.address);
-  const [mapsUrl, setMapsUrl] = useState(bookingPage.mapsUrl);
-  const pickOnMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || bookingPage.business)}`;
+  // reminder SMS. Saved into the workspace (localStorage until Supabase is wired).
+  const [address, setAddress] = useState(location.address);
+  const [mapsUrl, setMapsUrl] = useState(location.mapsUrl);
+  const [saved, setSaved] = useState(false);
+  const pickOnMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || business.name)}`;
+
+  function save() {
+    setLocation({ address: address.trim(), mapsUrl: mapsUrl.trim() });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -99,8 +107,8 @@ export function SettingsClient({ connected }: { connected: Record<string, boolea
             </p>
             <p className="mt-2 break-all text-[12.5px] leading-relaxed text-foreground/80">
               {lang === "tr"
-                ? `Bugun saat 14:00 randevunuz var: Sac kesimi @ ${bookingPage.business}. Yol tarifi: ${mapsUrl || "—"} Gorusmek uzere!`
-                : `Today at 14:00: Haircut @ ${bookingPage.business}. Directions: ${mapsUrl || "—"} See you soon!`}
+                ? `Bugun saat 14:00 randevunuz var: Sac kesimi @ ${business.name}. Yol tarifi: ${mapsUrl || "—"} Gorusmek uzere!`
+                : `Today at 14:00: Haircut @ ${business.name}. Directions: ${mapsUrl || "—"} See you soon!`}
             </p>
           </div>
         </CardContent>
@@ -139,8 +147,14 @@ export function SettingsClient({ connected }: { connected: Record<string, boolea
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button>{ui.saveChanges}</Button>
+      <div className="flex items-center justify-end gap-3">
+        {saved && (
+          <span className="inline-flex items-center gap-1 text-[13px] font-medium text-success">
+            <Check className="h-4 w-4" />
+            {lang === "tr" ? "Kaydedildi" : "Saved"}
+          </span>
+        )}
+        <Button onClick={save}>{ui.saveChanges}</Button>
       </div>
     </div>
   );

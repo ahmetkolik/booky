@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 import { PLAN_LABEL, type Plan } from "@/lib/demo/data";
-import { usePlan } from "@/components/app/plan-context";
+import { useWorkspace, initialsOf } from "@/components/app/workspace-context";
 
 interface SidebarProps {
   open?: boolean;
@@ -23,7 +23,7 @@ const PLANS: Plan[] = ["solo", "pro", "isletme"];
 export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
   const pathname = usePathname();
   const { t, lang } = useLang();
-  const { plan: activePlan, setPlan: setActivePlan } = usePlan();
+  const { plan: activePlan, setPlan: setActivePlan, isDemo, business } = useWorkspace();
   const [planOpen, setPlanOpen] = useState(false);
 
   const isActive = (href: string) =>
@@ -134,13 +134,17 @@ export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
             {lang === "tr" ? "İşletme paketine geç →" : "Upgrade to Business →"}
           </Link>
         )}
-        {/* Demo plan switcher */}
+        {/* Plan switcher — demo showcase, or instant plan change until Stripe is wired */}
         <div className="relative mt-2">
           <button
             onClick={() => setPlanOpen((v) => !v)}
             className="flex w-full items-center gap-1 rounded-lg border border-border bg-card/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
           >
-            <span className="flex-1 text-left">{lang === "tr" ? "Demo: paketi değiştir" : "Demo: switch plan"}</span>
+            <span className="flex-1 text-left">
+              {isDemo
+                ? lang === "tr" ? "Demo: paketi değiştir" : "Demo: switch plan"
+                : lang === "tr" ? "Paketi değiştir" : "Change plan"}
+            </span>
             <ChevronDown className={cn("h-3 w-3 transition-transform", planOpen && "rotate-180")} />
           </button>
           {planOpen && (
@@ -176,21 +180,24 @@ export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
           <Settings className="h-[17px] w-[17px] text-muted-foreground" />
           {lang === "tr" ? "Ayarlar" : "Settings"}
         </Link>
-        <button className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13.5px] font-medium text-foreground/70 transition-colors hover:bg-muted hover:text-foreground">
+        <a
+          href={`mailto:destek@${appConfig.domain}?subject=${encodeURIComponent(`${appConfig.name} destek`)}`}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13.5px] font-medium text-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+        >
           <LifeBuoy className="h-[17px] w-[17px] text-muted-foreground" />
           {lang === "tr" ? "Destek" : "Support"}
-        </button>
+        </a>
       </div>
 
       {/* Pinned user card */}
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-2 shadow-pill">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ backgroundImage: "var(--grad-brand)" }}>
-            SL
+            {initialsOf(business.name)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold">Studio Lumière</p>
-            <p className="truncate text-[11.5px] text-muted-foreground">owner@studiolumiere.co</p>
+            <p className="truncate text-[13px] font-semibold">{business.name}</p>
+            <p className="truncate text-[11.5px] text-muted-foreground">{business.email}</p>
           </div>
           <Link
             href="/login"

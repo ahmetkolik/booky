@@ -1,17 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Clock, CreditCard, TrendingUp, Tag } from "lucide-react";
+import { Plus, X, Clock, CreditCard, TrendingUp, Tag, Scissors } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, formatPrice, formatDuration } from "@/lib/utils";
-import { services, SERVICE_VAR, type Service } from "@/lib/demo/data";
+import { SERVICE_VAR, type Service } from "@/lib/demo/data";
+import { useWorkspace } from "@/components/app/workspace-context";
+import { ServiceFormModal } from "@/components/app/forms";
 
 export default function ServicesPage() {
   const { t, lang } = useLang();
-  const [selected, setSelected] = useState<Service | null>(services[0]);
+  const { services } = useWorkspace();
+  const [selectedId, setSelectedId] = useState<string | null>(services[0]?.id ?? null);
+  /** null = closed; "new" = create; otherwise the service being edited. */
+  const [editing, setEditing] = useState<Service | "new" | null>(null);
 
-  const avgPrice = Math.round(services.reduce((s, sv) => s + sv.price, 0) / services.length);
-  const mostBooked = [...services].sort((a, b) => b.bookings30d - a.bookings30d)[0];
+  const selected = services.find((s) => s.id === selectedId) ?? null;
+  const avgPrice = services.length ? Math.round(services.reduce((s, sv) => s + sv.price, 0) / services.length) : 0;
+  const mostBooked = [...services].sort((a, b) => b.bookings30d - a.bookings30d)[0] ?? null;
 
   return (
     <div className="mx-auto max-w-[1400px] animate-fade-in">
@@ -28,13 +34,41 @@ export default function ServicesPage() {
                 {services.length} {lang === "tr" ? "hizmet" : "services"} · {lang === "tr" ? "ort." : "avg."} {formatPrice(avgPrice)}
               </p>
             </div>
-            <button className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">
+            <button
+              onClick={() => setEditing("new")}
+              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+            >
               <Plus className="h-4 w-4" />
               {lang === "tr" ? "Hizmet ekle" : "Add service"}
             </button>
           </div>
 
+          {/* Empty state — fresh workspaces start with zero services */}
+          {services.length === 0 && (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card p-10 text-center shadow-soft">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Scissors className="h-6 w-6" />
+              </span>
+              <p className="font-display text-lg font-semibold">
+                {lang === "tr" ? "Henüz hizmet yok" : "No services yet"}
+              </p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {lang === "tr"
+                  ? "İlk hizmetini ekle — rezervasyon sayfan ve takvimin onunla çalışmaya başlar."
+                  : "Add your first service — your booking page and calendar start working with it."}
+              </p>
+              <button
+                onClick={() => setEditing("new")}
+                className="mt-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                {lang === "tr" ? "İlk hizmetini ekle" : "Add your first service"}
+              </button>
+            </div>
+          )}
+
           {/* Summary stats */}
+          {services.length > 0 && (
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
               <p className="label-mono text-muted-foreground">{lang === "tr" ? "Toplam hizmet" : "Total services"}</p>
@@ -51,8 +85,10 @@ export default function ServicesPage() {
               </p>
             </div>
           </div>
+          )}
 
           {/* Services table */}
+          {services.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -72,7 +108,7 @@ export default function ServicesPage() {
                     return (
                       <tr
                         key={sv.id}
-                        onClick={() => setSelected(sv)}
+                        onClick={() => setSelectedId(sv.id)}
                         className={cn(
                           "cursor-pointer border-b border-border/60 transition-colors last:border-0",
                           isSel ? "bg-primary/[0.04]" : "hover:bg-muted/50",
@@ -113,6 +149,7 @@ export default function ServicesPage() {
               </table>
             </div>
           </div>
+          )}
         </div>
 
         {/* ── Drawer ────────────────────────────────────────────── */}
@@ -124,7 +161,7 @@ export default function ServicesPage() {
                   {lang === "tr" ? "Hizmet detayı" : "Service detail"}
                 </h2>
                 <button
-                  onClick={() => setSelected(null)}
+                  onClick={() => setSelectedId(null)}
                   aria-label="close"
                   className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:hidden"
                 >
@@ -180,7 +217,7 @@ export default function ServicesPage() {
               </div>
 
               {/* Most booked badge */}
-              {selected.id === mostBooked.id && (
+              {mostBooked && selected.id === mostBooked.id && selected.bookings30d > 0 && (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-[12.5px] text-primary">
                   {lang === "tr"
                     ? "En çok rezervasyon alan hizmet."
@@ -188,13 +225,20 @@ export default function ServicesPage() {
                 </div>
               )}
 
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+              <button
+                onClick={() => setEditing(selected)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
                 {lang === "tr" ? "Hizmeti düzenle" : "Edit service"}
               </button>
             </div>
           </aside>
         )}
       </div>
+
+      {editing !== null && (
+        <ServiceFormModal service={editing === "new" ? null : editing} onClose={() => setEditing(null)} />
+      )}
     </div>
   );
 }

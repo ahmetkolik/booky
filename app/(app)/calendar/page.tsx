@@ -1,15 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Filter } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Plus, Filter, CalendarDays } from "lucide-react";
 import { useLang } from "@/components/i18n/language-provider";
 import { cn, minutesToHHMM, minutesToLabel, formatDuration, formatPrice } from "@/lib/utils";
 import {
-  appointments,
-  serviceById,
-  staff,
-  staffById,
-  services,
   dayStartMin,
   dayEndMin,
   slotMin,
@@ -17,6 +13,8 @@ import {
   STATUS_META,
   type Appointment,
 } from "@/lib/demo/data";
+import { useWorkspace } from "@/components/app/workspace-context";
+import { useNewAppointment } from "@/components/app/forms";
 
 const DAY_LABELS = [
   { tr: "Dün", en: "Yesterday" },
@@ -26,6 +24,8 @@ const DAY_LABELS = [
 
 export default function CalendarPage() {
   const { t, lang } = useLang();
+  const { appointments, staff, services, serviceById, staffById } = useWorkspace();
+  const newAppt = useNewAppointment();
   const [dayOffset, setDayOffset] = useState(0);
   const [staffFilter, setStaffFilter] = useState<string | null>(null);
   const [open, setOpen] = useState<Appointment | null>(null);
@@ -33,7 +33,7 @@ export default function CalendarPage() {
   const visibleStaff = staffFilter ? staff.filter((s) => s.id === staffFilter) : staff;
   const dayAppts = useMemo(
     () => appointments.filter((a) => a.dayOffset === dayOffset),
-    [dayOffset],
+    [dayOffset, appointments],
   );
   const dayLabel = DAY_LABELS[dayOffset + 1] ?? { tr: "Gün", en: "Day" };
 
@@ -61,14 +61,39 @@ export default function CalendarPage() {
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90">
+          <button
+            onClick={() => newAppt.open()}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+          >
             <Plus className="h-4 w-4" />
             {lang === "tr" ? "Randevu" : "New"}
           </button>
         </div>
       </div>
 
+      {/* Empty state — no staff means no columns to draw */}
+      {staff.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card p-10 text-center shadow-soft">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <CalendarDays className="h-6 w-6" />
+          </span>
+          <p className="font-display text-lg font-semibold">
+            {lang === "tr" ? "Takvim boş başlıyor" : "Your calendar starts empty"}
+          </p>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            {lang === "tr"
+              ? "Önce personel ekle — her personel bir sütun olur. Sonra randevular bu ızgaraya düşer."
+              : "Add staff first — each member becomes a column. Bookings then land on this grid."}
+          </p>
+          <Link href="/staff" className="mt-1 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:opacity-90">
+            <Plus className="h-4 w-4" />
+            {lang === "tr" ? "Personel ekle" : "Add staff"}
+          </Link>
+        </div>
+      )}
+
       {/* Filters: staff + service legend */}
+      {staff.length > 0 && (
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
           <Filter className="h-3.5 w-3.5" />
@@ -98,8 +123,10 @@ export default function CalendarPage() {
           ))}
         </span>
       </div>
+      )}
 
       {/* Grid */}
+      {staff.length > 0 && (
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
         <div className="overflow-x-auto">
           <div style={{ minWidth: Math.max(640, visibleStaff.length * 180 + 56) }}>
@@ -176,6 +203,7 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Detail modal */}
       {open && (
