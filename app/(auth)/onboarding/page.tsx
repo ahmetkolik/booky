@@ -12,6 +12,7 @@ import { useLang } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
 import { createFreshWorkspace, readPendingSignup } from "@/components/app/workspace-context";
+import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 
 /* Every appointment-based business type we know of. Rendered alphabetically
    in the active language; "other" lives in a free-text input below the grid. */
@@ -98,11 +99,46 @@ export default function OnboardingPage() {
     setSlugEdited(true);
   }
 
-  function finish() {
+  const [error, setError] = useState<string | null>(null);
+
+  async function finish() {
     setLoading(true);
-    // Creates an EMPTY workspace (the owner enters their own services, staff
-    // and bookings). Plan comes from signup?plan=…; Supabase will persist this.
+    setError(null);
     const pending = readPendingSignup();
+
+    if (supabaseConfigured) {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        const { error: insertError } = await supabase.from("businesses").insert({
+          owner_id: session.user.id,
+          slug: slug.trim(),
+          name: businessName.trim(),
+          category: categoryLabel ?? "",
+          contact_email: pending?.email || session.user.email,
+          owner_name: pending?.name || businessName.trim(),
+          plan: pending?.plan ?? "solo",
+        });
+        if (insertError) {
+          setError(
+            insertError.code === "23505"
+              ? lang === "tr"
+                ? "Bu rezervasyon URL'si zaten alınmış, başka bir tane dene."
+                : "That booking URL is already taken — try another."
+              : insertError.message,
+          );
+          setLoading(false);
+          return;
+        }
+        router.push("/dashboard");
+        return;
+      }
+    }
+
+    // No Supabase session — fall back to the local "fresh" workspace.
     createFreshWorkspace({
       name: businessName.trim(),
       slug: slug.trim(),
@@ -302,6 +338,9 @@ export default function OnboardingPage() {
               />
             </div>
 
+            {error && (
+              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>
+            )}
             <Button className="w-full gap-2" onClick={finish} disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {lang === "tr" ? "Panele git" : "Go to dashboard"} <ArrowRight className="h-4 w-4" />

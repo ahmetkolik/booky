@@ -31,7 +31,9 @@ export const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    amountKurus: 49900,
+    // Keep in sync with app.config.ts marketing.pricing — shown on the pricing
+    // page and here before checkout, must match what Stripe actually charges.
+    amountKurus: 89900,
     currency: "try",
     interval: "month",
     stripePriceId: process.env.STRIPE_PRICE_PRO ?? null,
@@ -41,7 +43,7 @@ export const PLANS: Plan[] = [
   {
     id: "isletme",
     name: "İşletme",
-    amountKurus: 99900,
+    amountKurus: 179900,
     currency: "try",
     interval: "month",
     stripePriceId: process.env.STRIPE_PRICE_ISLETME ?? null,

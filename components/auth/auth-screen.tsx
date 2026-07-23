@@ -12,34 +12,72 @@ import { Input, Label } from "@/components/ui/input";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { PLAN_BY_ID, type Plan } from "@/lib/stripe/plans";
 import { startDemoSession, storePendingSignup, hasWorkspace } from "@/components/app/workspace-context";
+import { createClient, supabaseConfigured } from "@/lib/supabase/client";
+import { formatPrice } from "@/lib/utils";
 
 /**
- * Login / signup with a DEMO BYPASS. Supabase isn't connected in this kit, so
- * submitting (or "Continue with demo") just drops you into the dashboard.
- * Signup carries name/email/plan into onboarding, which creates an EMPTY
- * workspace the owner fills in. Wire Supabase via /setup for real auth.
+ * Login / signup. When Supabase keys are present this runs real auth
+ * (supabase.auth.signUp / signInWithPassword); with no keys it falls back to
+ * the DEMO BYPASS — submitting just drops you into the dashboard. Signup
+ * carries name/email/plan into onboarding, which creates the business record.
  */
 export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"; planId?: Plan["id"] }) {
   const { ui, t, lang } = useLang();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const plan = PLAN_BY_ID[planId];
 
-  function enter(e?: React.FormEvent) {
+  async function enter(e?: React.FormEvent) {
     e?.preventDefault();
+    setError(null);
     setLoading(true);
+    const form = e?.currentTarget instanceof HTMLFormElement ? new FormData(e.currentTarget) : null;
+    const email = (form?.get("email") as string)?.trim() || "";
+    const password = (form?.get("password") as string) || "";
+    const name = (form?.get("name") as string)?.trim() || "";
+
+    if (supabaseConfigured && email && password) {
+      const supabase = createClient();
+
+      if (mode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
+        storePendingSignup({ name, email, plan: planId });
+        if (!data.session) {
+          // Email confirmation is required before a session exists.
+          setError(
+            lang === "tr"
+              ? "Hesabını onaylamak için e-postana gönderdiğimiz linke tıkla, sonra giriş yap."
+              : "Check your email to confirm your account, then sign in.",
+          );
+          setLoading(false);
+          return;
+        }
+        router.push("/onboarding");
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+      router.push("/dashboard");
+      return;
+    }
+
+    // No Supabase keys configured — demo bypass.
     if (mode === "signup") {
-      // Carry the form + chosen plan into onboarding (creates the workspace).
-      const form = e?.currentTarget instanceof HTMLFormElement ? new FormData(e.currentTarget) : null;
-      storePendingSignup({
-        name: (form?.get("name") as string)?.trim() || "",
-        email: (form?.get("email") as string)?.trim() || "",
-        plan: planId,
-      });
+      storePendingSignup({ name, email, plan: planId });
       setTimeout(() => router.push("/onboarding"), 450);
       return;
     }
-    // Login: keep an existing workspace; otherwise fall back to the demo.
     if (!hasWorkspace()) startDemoSession();
     setTimeout(() => router.push("/dashboard"), 450);
   }
@@ -113,8 +151,8 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
               <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span className="h-2 w-2 rounded-full bg-primary" />
                 {lang === "tr"
-                  ? `${plan.name} planı seçildi · ₺${plan.amountKurus / 100}/ay`
-                  : `${plan.name} plan selected · ₺${plan.amountKurus / 100}/mo`}
+                  ? `${plan.name} planı seçildi · ${formatPrice(plan.amountKurus / 100)}/ay`
+                  : `${plan.name} plan selected · ${formatPrice(plan.amountKurus / 100)}/mo`}
               </p>
             )}
           </div>
@@ -150,6 +188,9 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
               <Label htmlFor="password">{ui.password}</Label>
               <Input id="password" name="password" type="password" placeholder="••••••••" defaultValue="demodemo" />
             </div>
+            {error && (
+              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>
+            )}
             <Button type="submit" disabled={loading} className="w-full gap-2">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {isLogin ? ui.signIn : ui.getStarted}
@@ -164,9 +205,11 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
             {ui.continueDemo} →
           </button>
 
-          <p className="rounded-lg bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
-            {ui.demoNote}
-          </p>
+          {!supabaseConfigured && (
+            <p className="rounded-lg bg-muted px-3 py-2 text-center text-xs text-muted-foreground">
+              {ui.demoNote}
+            </p>
+          )}
 
           <p className="text-center text-sm text-muted-foreground">
             {isLogin ? ui.noAccount : ui.haveAccount}{" "}

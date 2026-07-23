@@ -51,6 +51,22 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: appConfig.name,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description: appConfig.description[DEFAULT_LANG],
+  url: `https://${appConfig.domain}`,
+  offers: appConfig.marketing.pricing.map((tier) => ({
+    "@type": "Offer",
+    name: tier.name,
+    price: tier.price.replace(/[^\d]/g, "") || "0",
+    priceCurrency: "TRY",
+  })),
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -61,6 +77,10 @@ export default function RootLayout({
       className={`${sans.variable} ${display.variable} ${mono.variable} h-full`}
     >
       <body className="min-h-full bg-background text-foreground antialiased font-sans" suppressHydrationWarning>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <LanguageProvider>{children}</LanguageProvider>
         </ThemeProvider>
