@@ -25,6 +25,7 @@ import {
   SERVICE_VAR,
   type Service,
   type ServiceColor,
+  type Staff,
 } from "@/lib/demo/data";
 
 /* ── Shared modal shell ───────────────────────────────────────────────────── */
@@ -304,14 +305,23 @@ export function ServiceFormModal({
 
 /* ── Staff form ───────────────────────────────────────────────────────────── */
 
-export function StaffFormModal({ onClose }: { onClose: () => void }) {
-  const { lang } = useLang();
-  const { addStaff, canAddStaff, planDef } = useWorkspace();
+export function StaffFormModal({
+  member = null,
+  onClose,
+}: {
+  /** null = add a new member */
+  member?: Staff | null;
+  onClose: () => void;
+}) {
+  const { lang, t } = useLang();
+  const { addStaff, updateStaff, deleteStaff, canAddStaff, planDef } = useWorkspace();
 
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [start, setStart] = useState(9 * 60);
-  const [end, setEnd] = useState(18 * 60);
+  const [name, setName] = useState(member?.name ?? "");
+  const [role, setRole] = useState(member ? t(member.role) : "");
+  const [start, setStart] = useState(member?.startMin ?? 9 * 60);
+  const [end, setEnd] = useState(member?.endMin ?? 18 * 60);
+  const [online, setOnline] = useState(member?.online ?? true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const hours: number[] = [];
   for (let m = 6 * 60; m <= 22 * 60; m += 30) hours.push(m);
@@ -319,13 +329,18 @@ export function StaffFormModal({ onClose }: { onClose: () => void }) {
   function save() {
     if (!name.trim()) return;
     const roleText = role.trim() || (lang === "tr" ? "Uzman" : "Specialist");
-    addStaff({ name: name.trim(), role: { tr: roleText, en: roleText }, startMin: start, endMin: Math.max(end, start + 60) });
+    const payload = { name: name.trim(), role: { tr: roleText, en: roleText }, startMin: start, endMin: Math.max(end, start + 60) };
+    if (member) updateStaff(member.id, { ...payload, online });
+    else addStaff(payload);
     onClose();
   }
 
   return (
-    <Modal title={lang === "tr" ? "Personel ekle" : "Add staff member"} onClose={onClose}>
-      {!canAddStaff ? (
+    <Modal
+      title={member ? (lang === "tr" ? "Personeli düzenle" : "Edit staff member") : lang === "tr" ? "Personel ekle" : "Add staff member"}
+      onClose={onClose}
+    >
+      {!member && !canAddStaff ? (
         <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4 text-center">
           <Lock className="mx-auto h-5 w-5 text-primary" />
           <p className="text-sm font-semibold">
@@ -368,9 +383,39 @@ export function StaffFormModal({ onClose }: { onClose: () => void }) {
               </select>
             </div>
           </div>
+          {member && (
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border p-3 text-[13px]">
+              <input type="checkbox" checked={online} onChange={(e) => setOnline(e.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
+              <span>
+                {lang === "tr" ? "Online randevu kabul ediyor" : "Accepting online bookings"}
+                <span className="block text-[11px] text-muted-foreground">
+                  {lang === "tr" ? "Kapalıysa rezervasyon sayfasında görünmez." : "When off, they're hidden from the booking page."}
+                </span>
+              </span>
+            </label>
+          )}
           <Button className="w-full" disabled={!name.trim()} onClick={save}>
-            {lang === "tr" ? "Personeli ekle" : "Add member"}
+            {member ? (lang === "tr" ? "Değişiklikleri kaydet" : "Save changes") : lang === "tr" ? "Personeli ekle" : "Add member"}
           </Button>
+          {member && (
+            <button
+              onClick={() => {
+                if (!confirmDelete) return setConfirmDelete(true);
+                deleteStaff(member.id);
+                onClose();
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/30 py-2 text-[12.5px] font-semibold text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {confirmDelete
+                ? lang === "tr"
+                  ? "Emin misin? Randevuları atanmamış kalır — tekrar tıkla"
+                  : "Sure? Their bookings become unassigned — click again"
+                : lang === "tr"
+                  ? "Personeli sil"
+                  : "Delete member"}
+            </button>
+          )}
         </div>
       )}
     </Modal>

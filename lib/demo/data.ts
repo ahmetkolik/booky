@@ -83,7 +83,7 @@ export const slotMin = 30; // grid row granularity
    The live list + grid blocks. `startMin` is minutes from midnight on the
    selected day; `dayOffset` lets a few rows fall on adjacent days so the day
    nav has something to switch to. */
-export type ApptStatus = "booked" | "checked-in" | "done" | "no-show";
+export type ApptStatus = "booked" | "checked-in" | "done" | "no-show" | "cancelled";
 
 export interface Appointment {
   id: string;
@@ -110,7 +110,11 @@ export const STATUS_META: Record<ApptStatus, { label: L; tone: string; dot: stri
   "checked-in": { label: { tr: "geldi", en: "checked-in" }, tone: "text-primary bg-primary/10", dot: "var(--color-primary)" },
   done: { label: { tr: "tamamlandı", en: "done" }, tone: "text-success bg-success/10", dot: "var(--color-success)" },
   "no-show": { label: { tr: "gelmedi", en: "no-show" }, tone: "text-destructive bg-destructive/10", dot: "var(--color-destructive)" },
+  cancelled: { label: { tr: "iptal", en: "cancelled" }, tone: "text-muted-foreground bg-muted", dot: "var(--color-muted-foreground)" },
 };
+
+/** Statuses that no longer occupy the chair (slot is free, no revenue). */
+export const INACTIVE_STATUSES: ApptStatus[] = ["no-show", "cancelled"];
 
 export const appointments: Appointment[] = [
   { id: "ap1", client: "Elif Şahin", clientInitials: "EŞ", clientPhone: "+90 532 110 4421", serviceId: "s1", staffId: "st1", dayOffset: 0, startMin: 9 * 60, status: "done", price: 850, paid: true, source: "online", pastVisits: 7, note: { tr: "Yanları kısa istiyor.", en: "Likes the sides short." } },

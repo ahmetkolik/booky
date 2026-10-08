@@ -29,6 +29,8 @@ export default function StaffPage() {
   const { staff, services, appointments } = useWorkspace();
   const [selectedId, setSelectedId] = useState<string | null>(staff[0]?.id ?? null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const editingMember = staff.find((s) => s.id === editing) ?? null;
 
   const selected = staff.find((s) => s.id === selectedId) ?? null;
   const onlineCount = staff.filter((s) => s.online).length;
@@ -264,6 +266,13 @@ export default function StaffPage() {
                 </span>
               </div>
 
+              <button
+                onClick={() => setEditing(selected.id)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                {lang === "tr" ? "Düzenle" : "Edit"}
+              </button>
+
               <Link
                 href="/calendar"
                 className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
@@ -277,6 +286,16 @@ export default function StaffPage() {
       </div>
 
       {adding && <StaffFormModal onClose={() => setAdding(false)} />}
+      {editingMember && (
+        <StaffFormModal
+          key={editingMember.id}
+          member={editingMember}
+          onClose={() => {
+            setEditing(null);
+            if (!staff.some((s) => s.id === editingMember.id)) setSelectedId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

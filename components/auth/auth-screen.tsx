@@ -13,7 +13,7 @@ import { LanguageToggle } from "@/components/ui/language-toggle";
 import { PLAN_BY_ID, type Plan } from "@/lib/stripe/plans";
 import { startDemoSession, storePendingSignup, hasWorkspace } from "@/components/app/workspace-context";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 /**
  * Login / signup. When Supabase keys are present this runs real auth
@@ -46,7 +46,13 @@ export function AuthScreen({
     const password = (form?.get("password") as string) || "";
     const name = (form?.get("name") as string)?.trim() || "";
 
-    if (supabaseConfigured && email && password) {
+    if (supabaseConfigured) {
+      // Real backend: never fall through to the demo bypass.
+      if (!email || !password) {
+        setError(lang === "tr" ? "E-posta ve şifreni gir." : "Enter your email and password.");
+        setLoading(false);
+        return;
+      }
       const supabase = createClient();
 
       if (mode === "signup") {
@@ -105,6 +111,22 @@ export function AuthScreen({
     setTimeout(() => router.push("/dashboard"), 450);
   }
 
+  /** Social sign-in. Live: real OAuth for providers enabled in
+   *  NEXT_PUBLIC_AUTH_PROVIDERS; demo: just enters like the form does. */
+  async function social(provider: "google" | "github") {
+    if (!supabaseConfigured) return enter();
+    setError(null);
+    setLoading(true);
+    const { error: oauthError } = await createClient().auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/onboarding` },
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+      setLoading(false);
+    }
+  }
+
   function enterDemo() {
     setLoading(true);
     startDemoSession();
@@ -112,6 +134,9 @@ export function AuthScreen({
   }
 
   const isLogin = mode === "login";
+  const enabledProviders = (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? "").split(",").map((p) => p.trim());
+  const showGoogle = !supabaseConfigured || enabledProviders.includes("google");
+  const showGithub = !supabaseConfigured || enabledProviders.includes("github");
   const stats = appConfig.marketing.stats.slice(0, 3);
 
   return (
@@ -180,21 +205,30 @@ export function AuthScreen({
             )}
           </div>
 
-          {/* Social (decorative in demo) */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" onClick={enter} className="gap-2">
-              <GoogleGlyph /> Google
-            </Button>
-            <Button variant="outline" onClick={enter} className="gap-2">
-              <GithubGlyph /> GitHub
-            </Button>
-          </div>
+          {/* Social — decorative in demo; in live mode only providers that are
+              actually enabled in Supabase (NEXT_PUBLIC_AUTH_PROVIDERS) show. */}
+          {(showGoogle || showGithub) && (
+            <>
+              <div className={cn("grid gap-3", showGoogle && showGithub ? "grid-cols-2" : "grid-cols-1")}>
+                {showGoogle && (
+                  <Button variant="outline" onClick={() => social("google")} className="gap-2">
+                    <GoogleGlyph /> Google
+                  </Button>
+                )}
+                {showGithub && (
+                  <Button variant="outline" onClick={() => social("github")} className="gap-2">
+                    <GithubGlyph /> GitHub
+                  </Button>
+                )}
+              </div>
 
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            {ui.orContinueWith} {ui.email.toLowerCase()}
-            <span className="h-px flex-1 bg-border" />
-          </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                {ui.orContinueWith} {ui.email.toLowerCase()}
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={enter} className="space-y-4">
             {!isLogin && (
@@ -208,7 +242,14 @@ export function AuthScreen({
               <Input id="email" name="email" type="email" autoComplete="email" placeholder="you@company.com" defaultValue={supabaseConfigured ? undefined : "demo@demo.app"} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">{ui.password}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">{ui.password}</Label>
+                {isLogin && supabaseConfigured && (
+                  <Link href="/forgot-password" className="text-[12px] text-primary hover:underline">
+                    {lang === "tr" ? "Şifremi unuttum" : "Forgot password?"}
+                  </Link>
+                )}
+              </div>
               <Input id="password" name="password" type="password" autoComplete={isLogin ? "current-password" : "new-password"} placeholder="••••••••" defaultValue={supabaseConfigured ? undefined : "demodemo"} />
             </div>
             {confirmed && !error && (

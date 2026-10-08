@@ -11,6 +11,7 @@ import {
   slotMin,
   SERVICE_VAR,
   STATUS_META,
+  INACTIVE_STATUSES,
   type Appointment,
 } from "@/lib/demo/data";
 import { useWorkspace } from "@/components/app/workspace-context";
@@ -181,7 +182,7 @@ export default function CalendarPage() {
                       const top = ((a.startMin - dayStartMin) / slotMin) * rowH;
                       const height = (svc.durationMin / slotMin) * rowH;
                       const color = SERVICE_VAR[svc.color];
-                      const faded = a.status === "no-show";
+                      const faded = INACTIVE_STATUSES.includes(a.status);
                       return (
                         <button
                           key={a.id}

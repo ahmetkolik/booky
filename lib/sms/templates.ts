@@ -32,9 +32,9 @@ const TEMPLATES: Record<ReminderType, Record<Lang, (d: TemplateData) => string>>
   },
   reminder_24h: {
     tr: (d) =>
-      `Hatirlat: Yarin ${d.time} randevunuz var. ${d.serviceName} @ ${d.businessName}. Sorun var mi? ${d.bookingUrl ?? ""}`,
+      `Hatirlatma: ${d.date} ${d.time} randevunuz var. ${d.serviceName} @ ${d.businessName}.${d.bookingUrl ? ` Degisiklik: ${d.bookingUrl}` : ""}`,
     en: (d) =>
-      `Reminder: Tomorrow ${d.time} you have ${d.serviceName} @ ${d.businessName}. Need to change? ${d.bookingUrl ?? ""}`,
+      `Reminder: ${d.date} ${d.time} you have ${d.serviceName} @ ${d.businessName}.${d.bookingUrl ? ` Need to change? ${d.bookingUrl}` : ""}`,
   },
   reminder_2h: {
     tr: (d) =>

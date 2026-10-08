@@ -17,6 +17,17 @@ export function isSmsConfigured(): boolean {
   );
 }
 
+/** Turkish numbers ("0532 111 22 33", "5321112233", "+90…") → E.164 for Twilio. */
+export function toE164(phone: string): string | null {
+  const raw = phone.trim();
+  const digits = raw.replace(/\D/g, "");
+  if (/^90\d{10}$/.test(digits)) return `+${digits}`;
+  if (/^0\d{10}$/.test(digits)) return `+90${digits.slice(1)}`;
+  if (/^[1-9]\d{9}$/.test(digits)) return `+90${digits}`;
+  if (raw.startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  return null;
+}
+
 export async function sendSms(to: string, body: string): Promise<{ success: boolean; sid?: string; error?: string }> {
   if (!isSmsConfigured()) {
     console.warn("[sms] Twilio not configured — skipping SMS to", to);

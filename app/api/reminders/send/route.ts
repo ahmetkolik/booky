@@ -15,7 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { sendSms, isSmsConfigured } from "@/lib/sms/client";
+import { sendSms, isSmsConfigured, toE164 } from "@/lib/sms/client";
 import { buildSmsMessage, type ReminderType, type Lang } from "@/lib/sms/templates";
 import { bookingPage } from "@/lib/demo/data";
 
@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, demo: true, error: "not_configured", preview: message });
   }
 
-  const result = await sendSms(phone, message);
+  const to = toE164(phone);
+  if (!to) return NextResponse.json({ error: "Invalid phone" }, { status: 400 });
+  const result = await sendSms(to, message);
   return NextResponse.json(result, { status: result.success ? 200 : 503 });
 }

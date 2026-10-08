@@ -25,6 +25,8 @@ import {
   activity as demoActivityData,
   bookingPage as demoBookingPage,
   DEMO_PLAN,
+  dayStartMin,
+  dayEndMin,
   type Plan,
   type Service,
   type ServiceColor,
@@ -194,8 +196,54 @@ interface BusinessRow {
   plan: Plan;
 }
 
-function buildAppointmentsUi(rows: any[]): Appointment[] {
-  const byClient = new Map<string, any[]>();
+interface ApptRow {
+  id: string;
+  service_id: string | null;
+  staff_id: string | null;
+  client_id: string | null;
+  client_name: string;
+  client_phone: string;
+  starts_at: string;
+  duration_min: number;
+  status: string;
+  price: number | string;
+  deposit_paid: boolean;
+  source: string;
+  note: string | null;
+  created_at: string;
+}
+
+interface ServiceRow {
+  id: string;
+  name_tr: string;
+  name_en: string;
+  duration_min: number;
+  price: number | string;
+  deposit: number | string;
+  color: string;
+}
+
+interface StaffRow {
+  id: string;
+  name: string;
+  initials: string | null;
+  role_tr: string | null;
+  role_en: string | null;
+  start_min: number;
+  end_min: number;
+  online: boolean;
+}
+
+interface ClientRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  created_at: string;
+}
+
+function buildAppointmentsUi(rows: ApptRow[]): Appointment[] {
+  const byClient = new Map<string, ApptRow[]>();
   for (const r of rows) {
     const key = r.client_id ?? r.client_phone;
     const list = byClient.get(key) ?? [];
@@ -214,8 +262,8 @@ function buildAppointmentsUi(rows: any[]): Appointment[] {
       client: r.client_name,
       clientInitials: initialsOf(r.client_name),
       clientPhone: r.client_phone,
-      serviceId: r.service_id,
-      staffId: r.staff_id,
+      serviceId: r.service_id ?? "",
+      staffId: r.staff_id ?? "",
       dayOffset,
       startMin,
       status: r.status as ApptStatus,
@@ -228,7 +276,7 @@ function buildAppointmentsUi(rows: any[]): Appointment[] {
   });
 }
 
-function buildServicesUi(rows: any[], apptRows: any[]): Service[] {
+function buildServicesUi(rows: ServiceRow[], apptRows: ApptRow[]): Service[] {
   const cutoff = Date.now() - 30 * 86_400_000;
   return rows.map((row) => ({
     id: row.id,
@@ -243,11 +291,11 @@ function buildServicesUi(rows: any[], apptRows: any[]): Service[] {
   }));
 }
 
-function buildStaffUi(rows: any[], apptsUi: Appointment[], serviceRows: any[]): Staff[] {
+function buildStaffUi(rows: StaffRow[], apptsUi: Appointment[], serviceRows: ServiceRow[]): Staff[] {
   const durationById = new Map(serviceRows.map((s) => [s.id, s.duration_min as number]));
   return rows.map((row) => {
     const todays = apptsUi.filter(
-      (a) => a.staffId === row.id && a.dayOffset === 0 && a.status !== "no-show",
+      (a) => a.staffId === row.id && a.dayOffset === 0 && a.status !== "no-show" && a.status !== "cancelled",
     );
     const bookedMin = todays.reduce((sum, a) => sum + (durationById.get(a.serviceId) ?? 0), 0);
     const windowMin = Math.max(1, row.end_min - row.start_min);
@@ -264,7 +312,7 @@ function buildStaffUi(rows: any[], apptsUi: Appointment[], serviceRows: any[]): 
   });
 }
 
-function buildClientsUi(rows: any[], apptsUi: Appointment[]): Client[] {
+function buildClientsUi(rows: ClientRow[], apptsUi: Appointment[]): Client[] {
   return rows.map((row) => {
     const mine = apptsUi.filter((a) => a.clientPhone === row.phone);
     const visits = mine.length;
@@ -289,7 +337,7 @@ function buildClientsUi(rows: any[], apptsUi: Appointment[]): Client[] {
   });
 }
 
-function buildActivityUi(rows: any[], servicesUi: Service[]): DActivity[] {
+function buildActivityUi(rows: ApptRow[], servicesUi: Service[]): DActivity[] {
   const nameById = new Map(servicesUi.map((s) => [s.id, s.name.tr]));
   return [...rows]
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
@@ -298,7 +346,7 @@ function buildActivityUi(rows: any[], servicesUi: Service[]): DActivity[] {
       id: `live-${r.id}`,
       who: r.client_name,
       action: { tr: "randevu aldı:", en: "booked:" } as L,
-      target: nameById.get(r.service_id) ?? "",
+      target: (r.service_id && nameById.get(r.service_id)) || "",
       at: r.created_at,
       tone: "success" as const,
     }));
@@ -347,6 +395,12 @@ interface WorkspaceValue {
   staff: Staff[];
   staffById: (id: string) => Staff;
   addStaff: (s: Omit<Staff, "id" | "initials" | "utilization" | "online">) => void;
+  updateStaff: (id: string, patch: Partial<Pick<Staff, "name" | "role" | "startMin" | "endMin" | "online">>) => void;
+  /** Removes the member. Their upcoming appointments stay but become unassigned. */
+  deleteStaff: (id: string) => void;
+  /** Last failed save in live mode (shown as a banner), or null. */
+  liveError: string | null;
+  clearLiveError: () => void;
 
   appointments: Appointment[];
   addAppointment: (a: {
@@ -377,6 +431,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const modeRef = useRef<"demo" | "fresh" | "live">("demo");
 
   const [live, setLive] = useState<BusinessRow | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const supabaseRef = useRef<SupabaseClient | null>(null);
 
   const refetchLive = useCallback(async (businessId: string) => {
@@ -400,6 +455,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       activity: buildActivityUi(apptRows, servicesUi),
     });
   }, []);
+
+  /** Live writes: surface DB errors instead of silently dropping them, then refresh. */
+  const afterWrite = useCallback(
+    (businessId: string) =>
+      ({ error }: { error: { message: string } | null }) => {
+        if (error) setLiveError(error.message);
+        return refetchLive(businessId);
+      },
+    [refetchLive],
+  );
 
   // Load persisted workspace after mount (SSR renders nothing until ready).
   // setTimeout, not rAF: browsers pause rAF for occluded windows, which would
@@ -524,8 +589,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ? { address: live!.address ?? "", mapsUrl: live!.maps_url ?? "" }
       : ws.location;
 
-    const serviceById = (id: string) => data.services.find((s) => s.id === id)!;
-    const staffById = (id: string) => data.staff.find((s) => s.id === id)!;
+    // A deleted service / unassigned staff leaves appointments pointing at
+    // nothing — return a placeholder instead of crashing the panel.
+    const serviceById = (id: string): Service =>
+      data.services.find((s) => s.id === id) ?? {
+        id,
+        name: { tr: "Silinmiş hizmet", en: "Deleted service" },
+        durationMin: 30,
+        price: 0,
+        deposit: 0,
+        color: "hair",
+        bookings30d: 0,
+      };
+    const staffById = (id: string): Staff =>
+      data.staff.find((s) => s.id === id) ?? {
+        id,
+        name: "—",
+        initials: "?",
+        role: { tr: "Atanmamış", en: "Unassigned" },
+        startMin: dayStartMin,
+        endMin: dayEndMin,
+        utilization: 0,
+        online: false,
+      };
 
     function setBusiness(b: WorkspaceBusiness) {
       if (isLive) {
@@ -536,7 +622,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           .eq("id", live!.id)
           .select()
           .single()
-          .then(({ data: row }) => {
+          .then(({ data: row, error }) => {
+            if (error) setLiveError(error.message);
             if (row) setLive(row as BusinessRow);
           });
         return;
@@ -553,7 +640,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           .eq("id", live!.id)
           .select()
           .single()
-          .then(({ data: row }) => {
+          .then(({ data: row, error }) => {
+            if (error) setLiveError(error.message);
             if (row) setLive(row as BusinessRow);
           });
         return;
@@ -601,7 +689,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             deposit: s.deposit,
             color: s.color,
           })
-          .then(() => refetchLive(live!.id));
+          .then(afterWrite(live!.id));
         return;
       }
       const svc: Service = { ...s, id: `svc-${Date.now()}`, bookings30d: 0 };
@@ -621,7 +709,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         if (patch.price !== undefined) row.price = patch.price;
         if (patch.deposit !== undefined) row.deposit = patch.deposit;
         if (patch.color !== undefined) row.color = patch.color;
-        supabase.from("services").update(row).eq("id", id).then(() => refetchLive(live!.id));
+        supabase.from("services").update(row).eq("id", id).then(afterWrite(live!.id));
         return;
       }
       commit((prev) => ({
@@ -633,7 +721,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     function deleteService(id: string) {
       if (isLive) {
         const supabase = supabaseRef.current!;
-        supabase.from("services").delete().eq("id", id).then(() => refetchLive(live!.id));
+        supabase.from("services").delete().eq("id", id).then(afterWrite(live!.id));
         return;
       }
       commit((prev) => ({
@@ -658,12 +746,51 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             end_min: s.endMin,
             online: true,
           })
-          .then(() => refetchLive(live!.id));
+          .then(afterWrite(live!.id));
         return;
       }
       const member: Staff = { ...s, id: `stf-${Date.now()}`, initials: initialsOf(s.name), utilization: 0, online: true };
       commit((prev) => ({ ...prev, staff: [...prev.staff, member] }));
       log(business.owner, { tr: "personel ekledi:", en: "added staff:" }, s.name, "info");
+    }
+
+    function updateStaff(id: string, patch: Partial<Pick<Staff, "name" | "role" | "startMin" | "endMin" | "online">>) {
+      if (isLive) {
+        const supabase = supabaseRef.current!;
+        const row: Record<string, unknown> = {};
+        if (patch.name !== undefined) {
+          row.name = patch.name;
+          row.initials = initialsOf(patch.name);
+        }
+        if (patch.role) {
+          row.role_tr = patch.role.tr;
+          row.role_en = patch.role.en;
+        }
+        if (patch.startMin !== undefined) row.start_min = patch.startMin;
+        if (patch.endMin !== undefined) row.end_min = patch.endMin;
+        if (patch.online !== undefined) row.online = patch.online;
+        supabase.from("staff").update(row).eq("id", id).then(afterWrite(live!.id));
+        return;
+      }
+      commit((prev) => ({
+        ...prev,
+        staff: prev.staff.map((m) =>
+          m.id === id ? { ...m, ...patch, ...(patch.name ? { initials: initialsOf(patch.name) } : {}) } : m,
+        ),
+      }));
+    }
+
+    function deleteStaff(id: string) {
+      if (isLive) {
+        const supabase = supabaseRef.current!;
+        supabase.from("staff").delete().eq("id", id).then(afterWrite(live!.id));
+        return;
+      }
+      commit((prev) => ({
+        ...prev,
+        staff: prev.staff.filter((m) => m.id !== id),
+        appointments: prev.appointments.map((a) => (a.staffId === id ? { ...a, staffId: "" } : a)),
+      }));
     }
 
     function addAppointment(input: {
@@ -685,14 +812,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           if (existing) {
             clientId = existing.id;
           } else {
-            const { data: newClient } = await supabase
+            const { data: newClient, error: clientErr } = await supabase
               .from("clients")
               .insert({ business_id: live!.id, name: input.client, phone: input.clientPhone, email: "" })
               .select()
               .single();
+            if (clientErr) setLiveError(clientErr.message);
             clientId = newClient?.id ?? null;
           }
-          await supabase.from("appointments").insert({
+          const { error: apptErr } = await supabase.from("appointments").insert({
             business_id: live!.id,
             service_id: input.serviceId,
             staff_id: input.staffId,
@@ -705,6 +833,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             price: svc.price,
             source: "phone",
           });
+          if (apptErr) setLiveError(apptErr.message);
           await refetchLive(live!.id);
         })();
         return;
@@ -752,7 +881,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     function setApptStatus(id: string, status: ApptStatus) {
       if (isLive) {
         const supabase = supabaseRef.current!;
-        supabase.from("appointments").update({ status }).eq("id", id).then(() => refetchLive(live!.id));
+        supabase
+          .from("appointments")
+          .update({ status, ...(status === "cancelled" ? { cancelled_at: new Date().toISOString() } : {}) })
+          .eq("id", id)
+          .then(afterWrite(live!.id));
         return;
       }
       commit((prev) => ({
@@ -767,7 +900,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         supabase
           .from("clients")
           .insert({ business_id: live!.id, name: c.name, phone: c.phone, email: c.email })
-          .then(() => refetchLive(live!.id));
+          .then(afterWrite(live!.id));
         return;
       }
       const client: Client = {
@@ -811,6 +944,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       staff: data.staff,
       staffById,
       addStaff,
+      updateStaff,
+      deleteStaff,
+      liveError,
+      clearLiveError: () => setLiveError(null),
 
       appointments: data.appointments,
       addAppointment,
@@ -832,7 +969,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         url: `booky.app/book/${business.slug}`,
       },
     };
-  }, [ready, ws, data, live, commit, log, persistWs, refetchLive]);
+  }, [ready, ws, data, live, liveError, commit, log, persistWs, refetchLive, afterWrite]);
 
   return <WorkspaceContext.Provider value={value}>{ready ? children : null}</WorkspaceContext.Provider>;
 }

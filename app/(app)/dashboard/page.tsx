@@ -37,6 +37,7 @@ import {
   slotMin,
   SERVICE_VAR,
   STATUS_META,
+  INACTIVE_STATUSES,
   type Appointment,
   type ApptStatus,
   type Service,
@@ -100,7 +101,8 @@ export default function DashboardPage() {
   }
 
   // Fresh workspaces: KPIs are computed from the owner's own data, not demo numbers.
-  const todays = appointments.filter((a) => a.dayOffset === 0);
+  // Cancelled / no-show appointments don't count as today's bookings or revenue.
+  const todays = appointments.filter((a) => a.dayOffset === 0 && !INACTIVE_STATUSES.includes(a.status));
   const kpiList: DKpi[] = isDemo
     ? kpis
     : [
@@ -238,7 +240,7 @@ export default function DashboardPage() {
                 {dayAppts.length}
               </span>
               <div className="ml-auto flex items-center gap-1.5">
-                {(["booked", "checked-in", "done", "no-show"] as ApptStatus[]).map((s) => (
+                {(["booked", "checked-in", "done", "no-show", "cancelled"] as ApptStatus[]).map((s) => (
                   <span key={s} className="hidden items-center gap-1.5 text-[11px] text-muted-foreground sm:inline-flex">
                     <span className="h-2 w-2 rounded-full" style={{ background: STATUS_META[s].dot }} />
                     {t(STATUS_META[s].label)}
@@ -860,7 +862,7 @@ function DaySchedule({
                     const height = (svc.durationMin / slotMin) * rowH;
                     const color = SERVICE_VAR[svc.color];
                     const active = a.id === selectedId;
-                    const faded = a.status === "no-show";
+                    const faded = INACTIVE_STATUSES.includes(a.status);
                     const order = appts.indexOf(a);
                     return (
                       <button
@@ -915,6 +917,7 @@ function AppointmentDrawer({
 }) {
   const { serviceById, staffById, setApptStatus } = useWorkspace();
   const newAppt = useNewAppointment();
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const svc = serviceById(appt.serviceId);
   const stf = staffById(appt.staffId);
   const st = STATUS_META[appt.status];
@@ -1018,6 +1021,45 @@ function AppointmentDrawer({
           {lang === "tr" ? "Yeniden rezerve et" : "Rebook"}
         </button>
       )}
+
+      {appt.status === "booked" &&
+        (confirmCancel ? (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2">
+            <span className="flex-1 text-[12px] text-destructive">
+              {lang === "tr" ? "Randevu iptal edilsin mi?" : "Cancel this appointment?"}
+            </span>
+            <button
+              onClick={() => setConfirmCancel(false)}
+              className="rounded-md px-2 py-1 text-[12px] text-muted-foreground hover:bg-muted"
+            >
+              {lang === "tr" ? "Vazgeç" : "Keep"}
+            </button>
+            <button
+              onClick={() => {
+                setApptStatus(appt.id, "cancelled");
+                setConfirmCancel(false);
+              }}
+              className="rounded-md bg-destructive px-2.5 py-1 text-[12px] font-semibold text-white hover:opacity-90"
+            >
+              {lang === "tr" ? "İptal et" : "Cancel it"}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setApptStatus(appt.id, "no-show")}
+              className="rounded-lg border border-border py-2 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {lang === "tr" ? "Gelmedi" : "No-show"}
+            </button>
+            <button
+              onClick={() => setConfirmCancel(true)}
+              className="rounded-lg border border-destructive/30 py-2 text-[12px] font-medium text-destructive transition-colors hover:bg-destructive/5"
+            >
+              {lang === "tr" ? "Randevuyu iptal et" : "Cancel appointment"}
+            </button>
+          </div>
+        ))}
     </div>
   );
 }

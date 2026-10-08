@@ -611,9 +611,13 @@ export default function BookingPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3 text-[12.5px] text-muted-foreground">
                     <CreditCard className="h-4 w-4 shrink-0 text-primary" />
-                    {lang === "tr"
-                      ? `Rezervasyonu onaylamak için ${formatPrice(svc.deposit)} depozito alınacak.`
-                      : `A ${formatPrice(svc.deposit)} deposit is required to confirm your booking.`}
+                    {isLiveBiz
+                      ? lang === "tr"
+                        ? `Bu hizmet için ${formatPrice(svc.deposit)} depozito istenir. Online ödeme alınmaz; işletme tahsilat için seninle iletişime geçer.`
+                        : `This service requires a ${formatPrice(svc.deposit)} deposit. Nothing is charged online — the business will contact you to collect it.`
+                      : lang === "tr"
+                        ? `Rezervasyonu onaylamak için ${formatPrice(svc.deposit)} depozito alınacak.`
+                        : `A ${formatPrice(svc.deposit)} deposit is required to confirm your booking.`}
                   </div>
                   <div className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-[12px] text-destructive/80">
                     <span className="mt-0.5 shrink-0">⚠️</span>
@@ -790,8 +794,8 @@ export default function BookingPage() {
               {smsConsent && (
                 <p className="text-[12px] text-muted-foreground">
                   {lang === "tr"
-                    ? "Randevunuzdan 24 saat önce hatırlatma, 2 saat önce yol tarifiyle son bir SMS gönderilecek."
-                    : "You'll get a reminder 24h before, and a final SMS with directions 2h before your appointment."}
+                    ? "Randevundan önce SMS ile hatırlatma gönderilecek."
+                    : "You'll get an SMS reminder before your appointment."}
                 </p>
               )}
 
