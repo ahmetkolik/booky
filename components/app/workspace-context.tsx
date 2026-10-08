@@ -327,7 +327,12 @@ interface WorkspaceValue {
   setLocation: (loc: WorkspaceLocation) => void;
 
   plan: Plan;
-  setPlan: (p: Plan) => void;
+  /** Demo/fresh: switches instantly. Live: redirects to Stripe Checkout (from
+   *  free) or the Stripe billing portal (from a paid plan). Resolves to an
+   *  error code when the redirect couldn't start, otherwise null. */
+  setPlan: (p: Plan) => Promise<string | null>;
+  /** True when backed by a real Supabase business (not demo/localStorage). */
+  isLive: boolean;
   planDef: PlanDef;
   atLeast: (required: Plan) => boolean;
   canAddStaff: boolean;
@@ -424,6 +429,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             if (!cancelled) setReady(true);
             return;
           }
+          // Signed in but no business yet (e.g. first login after confirming
+          // the email) → finish onboarding instead of showing demo data.
+          if (!biz && !cancelled) {
+            window.location.replace("/onboarding");
+            return;
+          }
         }
       }
 
@@ -495,7 +506,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<WorkspaceValue>(() => {
-    const isLive = modeRef.current === "live" && live !== null;
+    const isLive = live !== null;
     const planDef = PLAN_BY_ID[isLive ? live!.plan : ws.plan];
     const isDemo = !isLive && ws.mode === "demo";
 
@@ -550,21 +561,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       persistWs({ ...ws, location: loc });
     }
 
-    function setPlan(p: Plan) {
+    async function setPlan(p: Plan): Promise<string | null> {
       if (isLive) {
-        const supabase = supabaseRef.current!;
-        supabase
-          .from("businesses")
-          .update({ plan: p })
-          .eq("id", live!.id)
-          .select()
-          .single()
-          .then(({ data: row }) => {
-            if (row) setLive(row as BusinessRow);
+        // The plan column is server-owned (only the Stripe webhook writes it).
+        // Free → paid starts Checkout; paid → anything goes via the portal.
+        if (p === live!.plan) return null;
+        const endpoint = live!.plan === "solo" ? "/api/stripe/checkout" : "/api/stripe/portal";
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ planId: p }),
           });
-        return;
+          const json = await res.json().catch(() => ({}));
+          if (res.ok && json.url) {
+            window.location.href = json.url;
+            return null;
+          }
+          return (json.error as string) || "error";
+        } catch {
+          return "error";
+        }
       }
       persistWs({ ...ws, plan: p });
+      return null;
     }
 
     function addService(s: Omit<Service, "id" | "bookings30d">) {
@@ -775,6 +795,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       plan: isLive ? live!.plan : ws.plan,
       setPlan,
+      isLive,
       planDef,
       atLeast: (required) => ORDER.indexOf(isLive ? live!.plan : ws.plan) >= ORDER.indexOf(required),
       canAddStaff: planDef.maxStaff === null || data.staff.length < planDef.maxStaff,
@@ -802,7 +823,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       bookingInfo: {
         business: business.name,
         tagline: isDemo ? demoBookingPage.tagline : ({ tr: business.category, en: business.category } as L),
-        rating: isDemo ? demoBookingPage.rating : 5.0,
+        rating: isDemo ? demoBookingPage.rating : 0,
         reviews: isDemo ? demoBookingPage.reviews : 0,
         address: location.address,
         mapsUrl: location.mapsUrl,

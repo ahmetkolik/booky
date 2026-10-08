@@ -21,7 +21,16 @@ import { formatPrice } from "@/lib/utils";
  * the DEMO BYPASS — submitting just drops you into the dashboard. Signup
  * carries name/email/plan into onboarding, which creates the business record.
  */
-export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"; planId?: Plan["id"] }) {
+export function AuthScreen({
+  mode,
+  planId = "solo",
+  confirmed = false,
+}: {
+  mode: "login" | "signup";
+  planId?: Plan["id"];
+  /** Arrived from the email-confirmation link (see /auth/callback). */
+  confirmed?: boolean;
+}) {
   const { ui, t, lang } = useLang();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -41,7 +50,14 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
       const supabase = createClient();
 
       if (mode === "signup") {
-        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+            data: name ? { full_name: name } : undefined,
+          },
+        });
         if (signUpError) {
           setError(signUpError.message);
           setLoading(false);
@@ -62,13 +78,20 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
         return;
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError(signInError.message);
         setLoading(false);
         return;
       }
-      router.push("/dashboard");
+      // First sign-in after confirming the email: there's no business yet, so
+      // finish onboarding instead of landing on an empty/demo dashboard.
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("owner_id", signIn.user.id)
+        .maybeSingle();
+      router.push(biz ? "/dashboard" : "/onboarding");
       return;
     }
 
@@ -182,12 +205,19 @@ export function AuthScreen({ mode, planId = "solo" }: { mode: "login" | "signup"
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">{ui.email}</Label>
-              <Input id="email" name="email" type="email" placeholder="you@company.com" defaultValue="demo@demo.app" />
+              <Input id="email" name="email" type="email" autoComplete="email" placeholder="you@company.com" defaultValue={supabaseConfigured ? undefined : "demo@demo.app"} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">{ui.password}</Label>
-              <Input id="password" name="password" type="password" placeholder="••••••••" defaultValue="demodemo" />
+              <Input id="password" name="password" type="password" autoComplete={isLogin ? "current-password" : "new-password"} placeholder="••••••••" defaultValue={supabaseConfigured ? undefined : "demodemo"} />
             </div>
+            {confirmed && !error && (
+              <p className="rounded-lg bg-success/10 px-3 py-2 text-xs text-success">
+                {lang === "tr"
+                  ? "E-postan onaylandı. Şimdi giriş yapabilirsin."
+                  : "Your email is confirmed. You can sign in now."}
+              </p>
+            )}
             {error && (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>
             )}

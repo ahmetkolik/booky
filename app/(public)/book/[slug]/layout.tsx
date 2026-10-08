@@ -13,10 +13,13 @@ async function lookupBusiness(slug: string) {
         business: data.name as string,
         tagline: (data.category as string) ?? "",
         address: (data.address as string) ?? "",
-        rating: 5.0,
+        rating: 0,
         reviews: 0,
+        found: true,
       };
     }
+    // Real backend, unknown slug: not a page search engines should index.
+    if (slug !== "demo") return null;
   }
   return {
     business: bookingPage.business,
@@ -24,6 +27,7 @@ async function lookupBusiness(slug: string) {
     address: bookingPage.address,
     rating: bookingPage.rating,
     reviews: bookingPage.reviews,
+    found: true,
   };
 }
 
@@ -34,6 +38,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const business = await lookupBusiness(slug);
+  if (!business) {
+    return { title: `${appConfig.name} — Online Randevu`, robots: { index: false, follow: false } };
+  }
   const title = `${business.business} — Online Randevu Al`;
   const description = `${business.business} için online randevu alın. ${business.tagline} ${appConfig.name} ile 7/24 rezervasyon.`;
   const url = `https://${appConfig.domain}/book/${slug}`;
@@ -57,16 +64,23 @@ export default async function BookSlugLayout({
 }) {
   const { slug } = await params;
   const business = await lookupBusiness(slug);
+  if (!business) return <>{children}</>;
+  // Only claim a rating when there are real reviews behind it — Google treats
+  // an AggregateRating with no reviews as misleading structured data.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: business.business,
-    address: business.address,
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: business.rating,
-      reviewCount: business.reviews,
-    },
+    ...(business.address ? { address: business.address } : {}),
+    ...(business.reviews > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: business.rating,
+            reviewCount: business.reviews,
+          },
+        }
+      : {}),
   };
 
   return (

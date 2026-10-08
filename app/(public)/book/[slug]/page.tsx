@@ -28,7 +28,7 @@ import {
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLang } from "@/components/i18n/language-provider";
 import { createClient, supabaseConfigured } from "@/lib/supabase/client";
-import { toStartsAtISO, fromStartsAt } from "@/lib/scheduling";
+import { zonedDateKey, zonedMinutes, zonedToISO, addDaysToKey, keyParts, DEFAULT_TIMEZONE } from "@/lib/scheduling";
 import { initialsOf } from "@/components/app/workspace-context";
 import type { L } from "@/lib/i18n/config";
 
@@ -43,6 +43,7 @@ interface ResolvedBusiness {
   reviews: number;
   address: string;
   mapsUrl: string;
+  timezone: string;
 }
 
 interface BookingService {
@@ -60,23 +61,46 @@ interface BookingStaffMember {
   initials: string;
   role: L;
   online: boolean;
+  startMin: number;
+  endMin: number;
 }
+
+interface BookedRange {
+  staffId: string | null;
+  startMin: number;
+  durationMin: number;
+}
+
+/** Live mode: can `staffList` (or the business itself when it has no staff)
+ *  take a `durationMin` booking starting at `startMin`? */
+function isSlotFree(
+  startMin: number,
+  durationMin: number,
+  staffList: BookingStaffMember[],
+  booked: BookedRange[],
+  hasAnyStaff: boolean,
+): boolean {
+  const endMin = startMin + durationMin;
+  const overlaps = (b: BookedRange) => b.startMin < endMin && b.startMin + b.durationMin > startMin;
+  if (!hasAnyStaff) return !booked.some(overlaps);
+  return staffList.some(
+    (s) =>
+      startMin >= s.startMin &&
+      endMin <= s.endMin &&
+      !booked.some((b) => (b.staffId === s.id || b.staffId === null) && overlaps(b)),
+  );
+}
+
+const BOOKING_ERRORS: Record<string, { tr: string; en: string }> = {
+  slot_taken: { tr: "Bu saat az önce doldu, lütfen başka bir saat seç.", en: "That time was just taken — please pick another." },
+  too_many_bookings: { tr: "Bu numarayla zaten 3 aktif randevun var.", en: "You already have 3 upcoming bookings with this number." },
+  invalid_phone: { tr: "Telefon numarasını kontrol et (ör. 0532 123 45 67).", en: "Please check the phone number (e.g. 0532 123 45 67)." },
+  invalid_name: { tr: "Lütfen ad soyad gir.", en: "Please enter your full name." },
+  invalid_time: { tr: "Bu saat artık seçilemiyor, başka bir saat seç.", en: "That time can no longer be booked — pick another." },
+};
 
 const WEEK_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const WEEK_DAYS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-function getDemoWeek() {
-  const today = new Date();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    return d;
-  });
-}
-
-function localDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function fullDayGrid(): number[] {
   const out: number[] = [];
@@ -118,15 +142,16 @@ export default function BookingPage() {
   const { t, lang } = useLang();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const week = useMemo(() => getDemoWeek(), []);
 
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [resolved, setResolved] = useState<ResolvedBusiness | null>(null);
   const [offeredServices, setOfferedServices] = useState<BookingService[]>([]);
   const [availableStaff, setAvailableStaff] = useState<BookingStaffMember[]>([]);
   const [demoSlots, setDemoSlots] = useState<number[]>([]);
   const [demoBookedSlots, setDemoBookedSlots] = useState<number[]>([]);
-  const [liveBookedSlots, setLiveBookedSlots] = useState<{ staffId: string | null; startMin: number }[]>([]);
+  const [liveBookedSlots, setLiveBookedSlots] = useState<BookedRange[]>([]);
+  const [bookedRefresh, setBookedRefresh] = useState(0);
 
   // Resolve the business by slug: a real Supabase lookup when configured,
   // falling back to the demo fixture (also the fallback if the slug isn't found).
@@ -146,10 +171,11 @@ export default function BookingPage() {
             id: biz.id,
             business: biz.name,
             tagline: { tr: biz.category ?? "", en: biz.category ?? "" },
-            rating: 5.0,
+            rating: 0,
             reviews: 0,
             address: biz.address ?? "",
             mapsUrl: biz.maps_url ?? "",
+            timezone: biz.timezone || DEFAULT_TIMEZONE,
           });
           setOfferedServices(
             (servicesRes.data ?? []).map((r) => ({
@@ -170,14 +196,23 @@ export default function BookingPage() {
                 initials: r.initials || initialsOf(r.name),
                 role: { tr: r.role_tr ?? "", en: r.role_en ?? "" },
                 online: r.online,
+                startMin: r.start_min ?? dayStartMin,
+                endMin: r.end_min ?? dayEndMin,
               })),
           );
           setLoading(false);
           return;
         }
       }
-      // Fallback: demo fixture (also used when the slug matches nothing yet).
       if (cancelled) return;
+      // With a real backend, only the "demo" slug shows the sample salon —
+      // any other unknown slug is a dead link, not someone else's business.
+      if (supabaseConfigured && slug !== "demo") {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      // Demo fixture (no backend configured, or /book/demo).
       setResolved({
         id: null,
         business: bookingPage.business,
@@ -186,12 +221,21 @@ export default function BookingPage() {
         reviews: bookingPage.reviews,
         address: bookingPage.address,
         mapsUrl: bookingPage.mapsUrl,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE,
       });
       setOfferedServices(bookingPage.options.map((id) => serviceById(id)));
       setAvailableStaff(
         demoStaffData
           .filter((s) => s.online)
-          .map((s) => ({ id: s.id, name: s.name, initials: s.initials, role: s.role, online: s.online })),
+          .map((s) => ({
+            id: s.id,
+            name: s.name,
+            initials: s.initials,
+            role: s.role,
+            online: s.online,
+            startMin: s.startMin,
+            endMin: s.endMin,
+          })),
       );
       setDemoSlots(bookingPage.slots);
       setDemoBookedSlots(bookingPage.bookedSlots);
@@ -214,11 +258,16 @@ export default function BookingPage() {
   const [smsConsent, setSmsConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [assignedStaff, setAssignedStaff] = useState<string | null>(null);
 
-  // Pick a default service once the list loads.
-  useEffect(() => {
-    if (!selectedService && offeredServices.length > 0) setSelectedService(offeredServices[0].id);
-  }, [offeredServices, selectedService]);
+  // The next 7 days as "YYYY-MM-DD" keys in the business's own timezone.
+  const tz = resolved?.timezone ?? DEFAULT_TIMEZONE;
+  const days = useMemo(() => {
+    const today = zonedDateKey(new Date(), tz);
+    return Array.from({ length: 7 }, (_, i) => addDaysToKey(today, i));
+  }, [tz]);
+
+  // No explicit pick yet → the first service is the default (see `svc`).
 
   // Live businesses: refresh booked slots whenever the day (or staff) changes.
   useEffect(() => {
@@ -228,13 +277,14 @@ export default function BookingPage() {
       const supabase = createClient();
       const { data } = await supabase.rpc("get_booked_slots", {
         p_business_id: resolved!.id,
-        p_day: localDateKey(week[selectedDay]),
+        p_day: days[selectedDay],
       });
       if (cancelled) return;
       setLiveBookedSlots(
-        (data ?? []).map((r: { staff_id: string | null; starts_at: string }) => ({
+        (data ?? []).map((r: { staff_id: string | null; starts_at: string; duration_min: number }) => ({
           staffId: r.staff_id,
-          startMin: fromStartsAt(r.starts_at).startMin,
+          startMin: zonedMinutes(new Date(r.starts_at), resolved!.timezone),
+          durationMin: r.duration_min,
         })),
       );
     }
@@ -242,19 +292,30 @@ export default function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [resolved, selectedDay, week]);
+  }, [resolved, selectedDay, days, bookedRefresh]);
 
   const svc = offeredServices.find((s) => s.id === selectedService) ?? offeredServices[0];
   const stf = selectedStaff && selectedStaff !== "any" ? availableStaff.find((s) => s.id === selectedStaff) : null;
+  const doneStaff = stf ?? (assignedStaff ? availableStaff.find((s) => s.id === assignedStaff) : null);
 
-  const allSlots = resolved?.id ? fullDayGrid() : demoSlots;
-  const bookedSlots = resolved?.id
-    ? liveBookedSlots
-        .filter((b) => !selectedStaff || selectedStaff === "any" || b.staffId === selectedStaff || b.staffId === null)
-        .map((b) => b.startMin)
+  // Live: every grid slot, struck through unless a candidate staff member is
+  // working and free for the whole service duration (and it isn't in the past).
+  // Demo: the fixture's fixed open + booked lists.
+  const isLiveBiz = Boolean(resolved?.id);
+  const candidateStaff = stf ? [stf] : availableStaff;
+  const nowMin = isLiveBiz && selectedDay === 0 ? zonedMinutes(new Date(), tz) + 5 : -1;
+  const allSlots = isLiveBiz ? fullDayGrid() : demoSlots;
+  const bookedSlots = isLiveBiz
+    ? allSlots.filter(
+        (m) =>
+          m <= nowMin ||
+          !svc ||
+          !isSlotFree(m, svc.durationMin, candidateStaff, liveBookedSlots, availableStaff.length > 0),
+      )
     : demoBookedSlots;
 
   async function next() {
+    if (step !== "confirm") setSubmitError(null);
     if (step === "service") setStep("staff");
     else if (step === "staff") setStep("datetime");
     else if (step === "datetime") setStep("confirm");
@@ -264,42 +325,33 @@ export default function BookingPage() {
         setSubmitError(null);
         try {
           const supabase = createClient();
-          const { data: existingClient } = await supabase
-            .from("clients")
-            .select("id")
-            .eq("business_id", resolved.id)
-            .eq("phone", phone.trim())
-            .maybeSingle();
-          const clientId = existingClient
-            ? existingClient.id
-            : (
-                await supabase
-                  .from("clients")
-                  .insert({ business_id: resolved.id, name: name.trim(), phone: phone.trim() })
-                  .select()
-                  .single()
-              ).data?.id ?? null;
-
-          const { error } = await supabase.from("appointments").insert({
-            business_id: resolved.id,
-            service_id: svc.id,
-            staff_id: selectedStaff && selectedStaff !== "any" ? selectedStaff : null,
-            client_id: clientId,
-            client_name: name.trim(),
-            client_phone: phone.trim(),
-            starts_at: toStartsAtISO(selectedDay, selectedSlot),
-            duration_min: svc.durationMin,
-            status: "booked",
-            price: svc.price,
-            source: "online",
-            note: note.trim() || null,
-            sms_consent: smsConsent,
+          const { data, error } = await supabase.rpc("book_appointment", {
+            p_business_id: resolved.id,
+            p_service_id: svc.id,
+            p_staff_id: selectedStaff && selectedStaff !== "any" ? selectedStaff : null,
+            p_starts_at: zonedToISO(days[selectedDay], selectedSlot, resolved.timezone),
+            p_client_name: name.trim(),
+            p_client_phone: phone.trim(),
+            p_note: note.trim() || null,
+            p_sms_consent: smsConsent,
           });
           if (error) {
-            setSubmitError(lang === "tr" ? "Randevu kaydedilemedi, tekrar dene." : "Couldn't save the booking, try again.");
+            const code = Object.keys(BOOKING_ERRORS).find((k) => error.message?.includes(k));
+            const msg = code ? BOOKING_ERRORS[code] : null;
+            setSubmitError(
+              msg ? msg[lang] : lang === "tr" ? "Randevu kaydedilemedi, tekrar dene." : "Couldn't save the booking, try again.",
+            );
+            if (code === "slot_taken" || code === "invalid_time") {
+              setSelectedSlot(null);
+              setBookedRefresh((n) => n + 1);
+              setStep("datetime");
+            }
             setSubmitting(false);
             return;
           }
+          const assigned = (data as { staff_id?: string | null } | null)?.staff_id ?? null;
+          if (assigned && (!selectedStaff || selectedStaff === "any")) setAssignedStaff(assigned);
+          setBookedRefresh((n) => n + 1);
         } catch {
           setSubmitError(lang === "tr" ? "Randevu kaydedilemedi, tekrar dene." : "Couldn't save the booking, try again.");
           setSubmitting(false);
@@ -320,7 +372,33 @@ export default function BookingPage() {
     (step === "service") ||
     (step === "staff" && selectedStaff !== null) ||
     (step === "datetime" && selectedSlot !== null) ||
-    (step === "confirm" && name.trim().length > 1 && phone.trim().length > 7);
+    (step === "confirm" && name.trim().length > 1 && phone.replace(/\D/g, "").length >= 10);
+
+  if (notFound) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-6 text-center">
+        <p className="font-display text-xl font-bold">{lang === "tr" ? "İşletme bulunamadı" : "Business not found"}</p>
+        <p className="text-sm text-muted-foreground">
+          {lang === "tr"
+            ? "Bu rezervasyon linki geçersiz ya da değiştirilmiş. Linki işletmeden tekrar iste."
+            : "This booking link is invalid or has changed. Ask the business for a new link."}
+        </p>
+      </div>
+    );
+  }
+
+  if (!loading && resolved && offeredServices.length === 0) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-6 text-center">
+        <p className="font-display text-xl font-bold">{resolved.business}</p>
+        <p className="text-sm text-muted-foreground">
+          {lang === "tr"
+            ? "Bu işletme henüz online randevuya açık hizmet eklemedi."
+            : "This business hasn't listed any bookable services yet."}
+        </p>
+      </div>
+    );
+  }
 
   if (loading || !resolved || !svc) {
     return (
@@ -341,11 +419,17 @@ export default function BookingPage() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-[14px] font-semibold leading-tight">{resolved!.business}</p>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Star className="h-3 w-3 fill-warning text-warning" />
-                <span>{resolved!.rating}</span>
-                <span>({resolved!.reviews})</span>
-              </div>
+              {resolved!.reviews > 0 ? (
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Star className="h-3 w-3 fill-warning text-warning" />
+                  <span>{resolved!.rating}</span>
+                  <span>({resolved!.reviews})</span>
+                </div>
+              ) : (
+                resolved!.tagline[lang] && (
+                  <p className="truncate text-[11px] text-muted-foreground">{resolved!.tagline[lang]}</p>
+                )
+              )}
             </div>
           </div>
           <LanguageToggle />
@@ -376,7 +460,7 @@ export default function BookingPage() {
               </h2>
               <div className="space-y-2">
                 {offeredServices.map((sv) => {
-                  const sel = sv.id === selectedService;
+                  const sel = sv.id === svc.id;
                   return (
                     <button
                       key={sv.id}
@@ -471,9 +555,10 @@ export default function BookingPage() {
 
               {/* Day strip */}
               <div className="grid grid-cols-7 gap-1">
-                {week.map((d, i) => {
+                {days.map((key, i) => {
                   const dayNames = lang === "tr" ? WEEK_DAYS : WEEK_DAYS_EN;
                   const sel = selectedDay === i;
+                  const { weekday, day } = keyParts(key);
                   return (
                     <button
                       key={i}
@@ -483,8 +568,8 @@ export default function BookingPage() {
                         sel ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted/50",
                       )}
                     >
-                      <span className="text-[10px] font-medium opacity-70">{dayNames[d.getDay() === 0 ? 6 : d.getDay() - 1]}</span>
-                      <span className="tnum text-[15px] font-bold leading-tight">{d.getDate()}</span>
+                      <span className="text-[10px] font-medium opacity-70">{dayNames[weekday === 0 ? 6 : weekday - 1]}</span>
+                      <span className="tnum text-[15px] font-bold leading-tight">{day}</span>
                     </button>
                   );
                 })}
@@ -496,7 +581,7 @@ export default function BookingPage() {
                   {lang === "tr" ? "Müsait saatler" : "Available times"}
                 </p>
                 <div className="grid grid-cols-4 gap-2">
-                  {[...allSlots, ...bookedSlots].sort((a, b) => a - b).map((min) => {
+                  {[...new Set([...allSlots, ...bookedSlots])].sort((a, b) => a - b).map((min) => {
                     const booked = bookedSlots.includes(min);
                     const sel = selectedSlot === min;
                     return (
@@ -518,7 +603,7 @@ export default function BookingPage() {
                   })}
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  {lang === "tr" ? "Üstü çizili saatler dolu." : "Struck-through times are already booked."}
+                  {lang === "tr" ? "Üstü çizili saatler dolu ya da müsait değil." : "Struck-through times are booked or unavailable."}
                 </p>
               </div>
 
@@ -567,7 +652,7 @@ export default function BookingPage() {
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     <span>
-                      {week[selectedDay].toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long" })}
+                      {new Date(`${days[selectedDay]}T12:00:00Z`).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long", timeZone: "UTC" })}
                       {" · "}{minutesToHHMM(selectedSlot)}
                     </span>
                   </div>
@@ -656,8 +741,8 @@ export default function BookingPage() {
                 </h2>
                 <p className="mt-2 text-muted-foreground">
                   {lang === "tr"
-                    ? `${name}, SMS ve e-posta ile onay gönderildi.`
-                    : `${name}, a confirmation was sent via SMS and email.`}
+                    ? `${name}, randevun işletmeye iletildi.`
+                    : `${name}, your booking has been sent to the business.`}
                 </p>
               </div>
 
@@ -667,17 +752,17 @@ export default function BookingPage() {
                   <span className="text-muted-foreground">{lang === "tr" ? "Hizmet" : "Service"}</span>
                   <span className="font-semibold">{t(svc.name)}</span>
                 </div>
-                {stf && (
+                {doneStaff && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{lang === "tr" ? "Personel" : "Staff"}</span>
-                    <span className="font-semibold">{stf.name}</span>
+                    <span className="font-semibold">{doneStaff.name}</span>
                   </div>
                 )}
                 {selectedSlot !== null && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{lang === "tr" ? "Tarih & Saat" : "Date & Time"}</span>
                     <span className="tnum font-semibold">
-                      {week[selectedDay].toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long" })}
+                      {new Date(`${days[selectedDay]}T12:00:00Z`).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long", timeZone: "UTC" })}
                       {" "}{minutesToHHMM(selectedSlot)}
                     </span>
                   </div>
@@ -711,7 +796,7 @@ export default function BookingPage() {
               )}
 
               <button
-                onClick={() => { setStep("service"); setSelectedSlot(null); setName(""); setPhone(""); setNote(""); setSmsConsent(false); }}
+                onClick={() => { setStep("service"); setSelectedSlot(null); setAssignedStaff(null); setName(""); setPhone(""); setNote(""); setSmsConsent(false); }}
                 className="text-[13px] font-medium text-primary hover:underline"
               >
                 {lang === "tr" ? "Yeni randevu al" : "Book another appointment"}

@@ -41,6 +41,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No business found for this account" }, { status: 404 });
     }
     businessId = business.id;
+
+    // Already paying → changing plan happens in the billing portal, not by
+    // opening a second subscription.
+    const { data: existing } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("business_id", business.id)
+      .maybeSingle();
+    if (existing && ["active", "trialing", "past_due"].includes(existing.status ?? "")) {
+      return NextResponse.json({ error: "already_subscribed", usePortal: true }, { status: 409 });
+    }
   }
 
   const stripe = getStripe();

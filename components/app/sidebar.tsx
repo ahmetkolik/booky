@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sparkles, Settings, LifeBuoy, LogOut, X, Zap, ChevronDown } from "lucide-react";
 import appConfig from "@/app.config";
 import { Logo } from "@/components/ui/logo";
@@ -11,6 +11,7 @@ import { useLang } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 import { PLAN_LABEL, type Plan } from "@/lib/demo/data";
 import { useWorkspace, initialsOf } from "@/components/app/workspace-context";
+import { createClient, supabaseConfigured } from "@/lib/supabase/client";
 
 interface SidebarProps {
   open?: boolean;
@@ -23,8 +24,36 @@ const PLANS: Plan[] = ["solo", "pro", "isletme"];
 export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
   const pathname = usePathname();
   const { t, lang } = useLang();
-  const { plan: activePlan, setPlan: setActivePlan, isDemo, business } = useWorkspace();
+  const router = useRouter();
+  const { plan: activePlan, setPlan: setActivePlan, isDemo, isLive, business } = useWorkspace();
   const [planOpen, setPlanOpen] = useState(false);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+
+  async function choosePlan(p: Plan) {
+    setPlanOpen(false);
+    setPlanError(null);
+    setPlanBusy(true);
+    const err = await setActivePlan(p);
+    setPlanBusy(false);
+    if (err) {
+      setPlanError(
+        lang === "tr"
+          ? "Ödeme sayfası açılamadı. Ödeme sistemi henüz bağlı olmayabilir — destekle iletişime geç."
+          : "Couldn't open the billing page. Payments may not be set up yet — contact support.",
+      );
+    }
+  }
+
+  async function logOut() {
+    if (supabaseConfigured) {
+      try {
+        await createClient().auth.signOut();
+      } catch {}
+    }
+    router.push("/login");
+    router.refresh();
+  }
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
@@ -134,16 +163,21 @@ export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
             {lang === "tr" ? "İşletme paketine geç →" : "Upgrade to Business →"}
           </Link>
         )}
-        {/* Plan switcher — demo showcase, or instant plan change until Stripe is wired */}
+        {/* Plan switcher — instant in demo; live businesses go through Stripe */}
         <div className="relative mt-2">
           <button
             onClick={() => setPlanOpen((v) => !v)}
+            disabled={planBusy}
             className="flex w-full items-center gap-1 rounded-lg border border-border bg-card/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
           >
             <span className="flex-1 text-left">
-              {isDemo
-                ? lang === "tr" ? "Demo: paketi değiştir" : "Demo: switch plan"
-                : lang === "tr" ? "Paketi değiştir" : "Change plan"}
+              {planBusy
+                ? lang === "tr" ? "Yönlendiriliyor…" : "Redirecting…"
+                : isDemo
+                  ? lang === "tr" ? "Demo: paketi değiştir" : "Demo: switch plan"
+                  : isLive && activePlan !== "solo"
+                    ? lang === "tr" ? "Aboneliği yönet" : "Manage subscription"
+                    : lang === "tr" ? "Paketi değiştir" : "Change plan"}
             </span>
             <ChevronDown className={cn("h-3 w-3 transition-transform", planOpen && "rotate-180")} />
           </button>
@@ -152,7 +186,7 @@ export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
               {PLANS.map((p) => (
                 <button
                   key={p}
-                  onClick={() => { setActivePlan(p); setPlanOpen(false); }}
+                  onClick={() => choosePlan(p)}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-2 text-[12px] transition-colors hover:bg-muted",
                     activePlan === p ? "font-semibold text-primary" : "text-foreground/70",
@@ -165,6 +199,7 @@ export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
             </div>
           )}
         </div>
+        {planError && <p className="mt-1.5 text-[10.5px] leading-snug text-destructive">{planError}</p>}
       </div>
 
       {/* Settings + Support */}
@@ -199,13 +234,15 @@ export function Sidebar({ open, onClose, onAiOpen }: SidebarProps) {
             <p className="truncate text-[13px] font-semibold">{business.name}</p>
             <p className="truncate text-[11.5px] text-muted-foreground">{business.email}</p>
           </div>
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={logOut}
             aria-label={lang === "tr" ? "Çıkış" : "Log out"}
+            title={lang === "tr" ? "Çıkış yap" : "Log out"}
             className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
-          </Link>
+          </button>
         </div>
       </div>
     </aside>

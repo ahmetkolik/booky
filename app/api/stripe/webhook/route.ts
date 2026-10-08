@@ -24,6 +24,12 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  // A failed DB write must NOT be acknowledged with 200, or Stripe stops
+  // retrying and the business keeps the wrong plan forever.
+  const fail = (what: string, err: unknown) => {
+    console.error(`[stripe] ${event.type}: ${what} failed`, err);
+    return NextResponse.json({ error: `${what} failed` }, { status: 500 });
+  };
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -32,7 +38,7 @@ export async function POST(req: NextRequest) {
       const planId = session.metadata?.planId as Plan["id"] | undefined;
 
       if (admin && businessId) {
-        await admin.from("subscriptions").upsert({
+        const { error: subErr } = await admin.from("subscriptions").upsert({
           business_id: businessId,
           stripe_customer_id: String(session.customer ?? ""),
           stripe_subscription_id: String(session.subscription ?? ""),
@@ -40,8 +46,10 @@ export async function POST(req: NextRequest) {
           status: "active",
           updated_at: new Date().toISOString(),
         });
+        if (subErr) return fail("subscriptions upsert", subErr);
         if (planId) {
-          await admin.from("businesses").update({ plan: planId }).eq("id", businessId);
+          const { error: bizErr } = await admin.from("businesses").update({ plan: planId }).eq("id", businessId);
+          if (bizErr) return fail("businesses plan update", bizErr);
         }
       } else {
         console.log("[stripe] checkout.session.completed (no businessId / admin client)", {
@@ -59,16 +67,23 @@ export async function POST(req: NextRequest) {
       const businessId = sub.metadata?.businessId as string | undefined;
 
       if (admin && businessId) {
-        await admin.from("subscriptions").upsert({
+        const { error: subErr } = await admin.from("subscriptions").upsert({
           business_id: businessId,
+          stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
           stripe_subscription_id: sub.id,
           plan_id: plan?.id ?? null,
           status: sub.status,
           current_period_end: item ? new Date(item.current_period_end * 1000).toISOString() : null,
           updated_at: new Date().toISOString(),
         });
-        const nextPlan: Plan["id"] = event.type === "customer.subscription.deleted" ? "solo" : plan?.id ?? "solo";
-        await admin.from("businesses").update({ plan: nextPlan }).eq("id", businessId);
+        if (subErr) return fail("subscriptions upsert", subErr);
+        // Paid features only while Stripe says the subscription is in good
+        // standing (past_due keeps access during Stripe's retry window).
+        const inGoodStanding = ["active", "trialing", "past_due"].includes(sub.status);
+        const nextPlan: Plan["id"] =
+          event.type === "customer.subscription.deleted" || !inGoodStanding ? "solo" : plan?.id ?? "solo";
+        const { error: bizErr } = await admin.from("businesses").update({ plan: nextPlan }).eq("id", businessId);
+        if (bizErr) return fail("businesses plan update", bizErr);
       } else {
         console.log(`[stripe] ${event.type} (no businessId / admin client)`, {
           subscriptionId: sub.id,

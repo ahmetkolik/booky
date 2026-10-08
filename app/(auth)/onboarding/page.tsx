@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Loader2, Check } from "lucide-react";
@@ -82,6 +82,33 @@ export default function OnboardingPage() {
   /** Free-text business type — used when none of the cards fit. */
   const [customType, setCustomType] = useState("");
 
+  // Real backend: onboarding needs a signed-in owner without a business yet.
+  // No session → sign in first; already has a business → straight to dashboard.
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!session) {
+        router.replace("/login");
+        return;
+      }
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("owner_id", session.user.id)
+        .maybeSingle();
+      if (!cancelled && biz) router.replace("/dashboard");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
   const sortedCategories = [...CATEGORIES].sort((a, b) =>
     a.label[lang].localeCompare(b.label[lang], lang),
   );
@@ -119,8 +146,12 @@ export default function OnboardingPage() {
           name: businessName.trim(),
           category: categoryLabel ?? "",
           contact_email: pending?.email || session.user.email,
-          owner_name: pending?.name || businessName.trim(),
-          plan: pending?.plan ?? "solo",
+          owner_name:
+            pending?.name ||
+            (session.user.user_metadata?.full_name as string | undefined) ||
+            businessName.trim(),
+          // plan is always "solo" here (enforced in the DB); paid plans start
+          // only through Stripe Checkout below.
         });
         if (insertError) {
           setError(
@@ -133,9 +164,28 @@ export default function OnboardingPage() {
           setLoading(false);
           return;
         }
+        // Picked a paid plan at signup → send them to pay for it now.
+        if (pending?.plan && pending.plan !== "solo") {
+          try {
+            const res = await fetch("/api/stripe/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ planId: pending.plan }),
+            });
+            const json = await res.json().catch(() => ({}));
+            if (res.ok && json.url) {
+              window.location.href = json.url;
+              return;
+            }
+          } catch {}
+        }
         router.push("/dashboard");
         return;
       }
+      // Configured backend but no session: never silently fall back to a
+      // browser-only workspace — the owner would lose everything they set up.
+      router.replace("/login");
+      return;
     }
 
     // No Supabase session — fall back to the local "fresh" workspace.
@@ -213,7 +263,8 @@ export default function OnboardingPage() {
                 {lang === "tr" ? "Rezervasyon URL'si" : "Booking URL"}
               </Label>
               <div className="flex items-center rounded-lg border border-border bg-muted">
-                <span className="select-none px-3 text-sm text-muted-foreground">
+                {/* Host is only known in the browser; the server renders a placeholder. */}
+                <span suppressHydrationWarning className="select-none px-3 text-sm text-muted-foreground">
                   {typeof window !== "undefined" ? window.location.host : "app.com"}/book/
                 </span>
                 <input

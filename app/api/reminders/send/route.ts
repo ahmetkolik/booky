@@ -22,7 +22,9 @@ import { bookingPage } from "@/lib/demo/data";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function authorized(req: NextRequest): boolean {
-  if (!CRON_SECRET) return true; // dev: skip auth when secret not set
+  // Fail closed: without a secret this endpoint would let anyone send SMS on
+  // your Twilio bill. Only local `next dev` may skip it.
+  if (!CRON_SECRET) return process.env.NODE_ENV === "development";
   const auth = req.headers.get("authorization");
   return auth === `Bearer ${CRON_SECRET}`;
 }

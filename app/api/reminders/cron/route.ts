@@ -1,7 +1,7 @@
 /**
  * GET /api/reminders/cron
  *
- * Called by Vercel Cron (schedule: every 2h + daily 08:00 Europe/Istanbul).
+ * Called by Vercel Cron (see vercel.json — currently once a day, 08:00 UTC).
  * Finds bookings that need reminders and dispatches SMS via /api/reminders/send.
  *
  * With Supabase wired: query appointments WHERE reminder_sent_at IS NULL
@@ -18,7 +18,9 @@ export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const auth = req.headers.get("authorization");
 
-  if (cronSecret && auth !== `Bearer ${cronSecret}`) {
+  // Fail closed outside local dev: Vercel Cron sends `Bearer $CRON_SECRET`.
+  const allowed = cronSecret ? auth === `Bearer ${cronSecret}` : process.env.NODE_ENV === "development";
+  if (!allowed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
